@@ -6,7 +6,8 @@
 
 Записывайте голосовые в Telegram - агент сам разберётся что с ними делать: создаст задачи, сохранит мысли, обновит прогресс по целям.
 
-<img width="1052" height="2068" alt="Telegram_27_December_2025_3NllRAwD" src="https://github.com/user-attachments/assets/f97d7037-5c51-4672-bee8-53af9c6b6423" />
+<img width="1024" height="1968" alt="Telegram_27_December_2025_ALVR9dWM" src="https://github.com/user-attachments/assets/5f76a061-3b46-4857-b638-11783973c0ad" />
+
 
 ---
 
