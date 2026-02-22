@@ -1,59 +1,60 @@
 ---
 type: monthly
-period: YYYY-MM
-updated: YYYY-MM-DD
+period: 2026-02
+updated: 2026-02-22
 ---
 
 # Monthly Focus
 
 ## Top 3 Priorities
 
-### Priority 1: [Your Top Priority]
-<!-- What MUST happen this month? -->
+### Priority 1: 3 ЛПР рынка дата-центров → контракт 50+ млн ₽
 
-**Why it matters:** [connection to yearly goal]
+**Why it matters:** Прорыв в доходе 2025 начинается с одного крупного контракта.
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Определить 5 целевых компаний дата-центров
+- [ ] Выйти на 3 ЛПР через существующие связи Zapusk Group
+- [ ] Организовать минимум 3 личные встречи/переговоры
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:**  
+3 проведённых переговоров + сформированное предложение на 50+ млн ₽.
 
 ---
 
-### Priority 2: [Second Priority]
+### Priority 2: 12 тренировок за месяц
 
-**Why it matters:** [connection to yearly goal]
+**Why it matters:** Энергия, уверенность перед камерой, статус.
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Запланировать 3 тренировки в неделю в календаре
+- [ ] Выбрать динамичные форматы (танцы / bungee / батуты)
+- [ ] Фиксировать прогресс (фото/замеры)
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:**  
+12 завершённых тренировок.
 
 ---
 
-### Priority 3: [Third Priority]
+### Priority 3: LinkedIn-профиль стратегического уровня
 
-**Why it matters:** [connection to yearly goal]
+**Why it matters:** Фундамент международной публичности.
 
 **Key Actions:**
-- [ ] Action 1
-- [ ] Action 2
-- [ ] Action 3
+- [ ] Переписать headline и summary на английском
+- [ ] Оформить позиционирование: Strategic Communications Leader & Founder of ANKO
+- [ ] Обновить фото и визуальный стиль
 
-**Definition of Done:** [clear outcome]
+**Definition of Done:**  
+Полностью оформленный профиль, готовый к международной аудитории.
 
 ---
 
 ## NOT Doing This Month
 
-<!-- What are you consciously saying NO to? -->
--
--
--
+- Мелкие несистемные задачи
+- Рутину без стратегической ценности
+- Работу в хаосе без структуры
 
 ---
 

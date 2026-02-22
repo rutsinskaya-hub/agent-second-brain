@@ -1,76 +1,109 @@
 ---
 type: yearly
 period: 2025
-updated: YYYY-MM-DD
+updated: 2026-02-22
 ---
 
 # Goals 2025
 
 ## Annual Theme
 
-<!-- One word or phrase that defines this year -->
-<!-- Example: "Foundation", "Growth", "Balance" -->
+Прорыв в доходе и публичности
 
 ---
 
 ## Career & Business
 
-### Goal 1: [Your Goal]
-<!-- What do you want to achieve professionally? -->
+### Goal 1: Выйти на личный доход 500 000 ₽ в месяц
+
+**Структура дохода:**
+80% CMO (база)  
+20% АНКО (рост)
 
 **Success Metrics:**
-- [ ] Metric 1
-- [ ] Metric 2
+- [ ] Доход 500 000 ₽ к декабрю
+- [ ] Стабильная CMO-позиция стратегического уровня
+- [ ] Минимум 2 прибыльных проекта АНКО
 
 **Quarterly Milestones:**
-- Q1: [milestone]
-- Q2: [milestone]
-- Q3: [milestone]
-- Q4: [milestone]
+- Q1: Закрепить CMO-позицию / запуск LinkedIn-стратегии
+- Q2: Запуск LinkedIn-сериала “Beyond Borders: Building Data Business in Russia”
+- Q3: Первые международные контакты и выступления
+- Q4: Выход на целевой доход
+
+---
+
+### Goal 2: Прорыв в публичности
+
+Позиционирование:
+**Стратег корпоративных коммуникаций и основатель АНКО**
+
+**Success Metrics:**
+- [ ] 5 выступлений
+- [ ] 10 интервью
+- [ ] 10 000 подписчиков Telegram
+- [ ] LinkedIn 2 000–3 000 подписчиков
+- [ ] 2 международных выступления
+- [ ] 1 колонка в РБК или Forbes
 
 ---
 
 ## Health & Energy
 
-### Goal 1: [Your Goal]
-<!-- What health habits do you want to build? -->
+### Goal 1: Спорт 3 раза в неделю как часть идентичности
+
+Формат:
+танцы / bungee / батуты / динамичные форматы
+
+Триггеры:
+- Сцена
+- Камера
+- Эстетика тела
+- Подготовка к LinkedIn-сериалу
 
 **Success Metrics:**
-- [ ] Metric 1
-- [ ] Metric 2
+- [ ] 3 тренировки в неделю минимум 40 недель
+- [ ] Видимый прогресс в форме
+- [ ] Повышение уверенности перед камерой
 
 ---
 
 ## Relationships
 
-### Goal 1: [Your Goal]
-<!-- How do you want to improve your relationships? -->
+### Goal 1: Финансовая самостоятельность Игоря
+
+**Цель:** 200 000 ₽ в месяц через АНКО
 
 **Success Metrics:**
-- [ ] Metric 1
-- [ ] Metric 2
+- [ ] 1–2 стабильных направления дохода в АНКО
+- [ ] Чёткое разделение ролей
+- [ ] Мы союзники против проблемы, а не друг против друга
 
 ---
 
 ## Personal Growth
 
-### Goal 1: [Your Goal]
-<!-- What skills or habits do you want to develop? -->
+### Goal 1: Освоить 3 стратегических навыка
+
+- Публичные выступления
+- Международный нетворкинг
+- Нейросети и AI для масштабирования
 
 **Success Metrics:**
-- [ ] Metric 1
-- [ ] Metric 2
+- [ ] Пройдено обучение по выступлениям
+- [ ] 300+ целевых LinkedIn-контактов
+- [ ] AI внедрён в ежедневную работу
 
 ---
 
 ## Financial
 
-### Goal 1: [Your Goal]
-<!-- What financial milestones do you want to reach? -->
+### Goal 1: Закрыть долги и начать формировать резерв
 
 **Success Metrics:**
-- [ ] Metric 1
-- [ ] Metric 2
+- [ ] Полное погашение ключевых обязательств
+- [ ] Первые 1–3 млн в резерве
+- [ ] Чёткая финансовая дисциплина
 
 ---
 
@@ -78,11 +111,11 @@ updated: YYYY-MM-DD
 
 | Area | Goal | Progress | Status |
 |------|------|----------|--------|
-| Career | [goal] | 0% | --- |
-| Health | [goal] | 0% | --- |
-| Relationships | [goal] | 0% | --- |
-| Growth | [goal] | 0% | --- |
-| Financial | [goal] | 0% | --- |
+| Career | 500k доход | 0% | --- |
+| Health | 3 тренировки/нед | 0% | --- |
+| Relationships | 200k Игоря | 0% | --- |
+| Growth | Сериал + сцена | 0% | --- |
+| Financial | Долги → резерв | 0% | --- |
 
 ---
 
