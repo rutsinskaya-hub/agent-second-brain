@@ -1,5 +1,6 @@
 # Environment files (ВАЖНО: секреты!)
 .env
+gcp-oauth.keys.json
 .env.local
 .env.*.local
 
