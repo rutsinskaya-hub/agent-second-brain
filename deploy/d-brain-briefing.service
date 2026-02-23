@@ -5,5 +5,6 @@ Description=d-brain Morning Briefing
 Type=oneshot
 User=myuser
 WorkingDirectory=/home/myuser/projects/agent-second-brain
+ExecStartPre=/bin/chmod +x /home/myuser/projects/agent-second-brain/scripts/briefing.sh
 ExecStart=/home/myuser/projects/agent-second-brain/scripts/briefing.sh
 Environment=PYTHONUNBUFFERED=1
