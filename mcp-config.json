@@ -1,9 +1,9 @@
 {
   "mcpServers": {
-    "todoist": {
+    "notion": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@doist/todoist-ai"]
+      "args": ["-y", "@notionhq/notion-mcp-server"]
     }
   }
 }

@@ -1,6 +1,5 @@
 """Handler for /do command - arbitrary Claude requests."""
 
-import asyncio
 import logging
 
 from aiogram import Bot, Router
@@ -10,7 +9,8 @@ from aiogram.types import Message
 
 from d_brain.bot.formatters import format_process_report
 from d_brain.bot.states import DoCommandState
-from d_brain.config import get_settings
+from d_brain.bot.utils import run_with_progress
+from d_brain.config import Settings
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.transcription import DeepgramTranscriber
 
@@ -19,16 +19,14 @@ logger = logging.getLogger(__name__)
 
 
 @router.message(Command("do"))
-async def cmd_do(message: Message, command: CommandObject, state: FSMContext) -> None:
+async def cmd_do(message: Message, command: CommandObject, state: FSMContext, settings: Settings) -> None:
     """Handle /do command."""
     user_id = message.from_user.id if message.from_user else 0
 
-    # Check for inline text: /do move overdue tasks
     if command.args:
-        await process_request(message, command.args, user_id)
+        await process_request(message, command.args, user_id, settings)
         return
 
-    # Otherwise, wait for next message
     await state.set_state(DoCommandState.waiting_for_input)
     await message.answer(
         "🎯 <b>Что сделать?</b>\n\n"
@@ -37,16 +35,14 @@ async def cmd_do(message: Message, command: CommandObject, state: FSMContext) ->
 
 
 @router.message(DoCommandState.waiting_for_input)
-async def handle_do_input(message: Message, bot: Bot, state: FSMContext) -> None:
+async def handle_do_input(message: Message, bot: Bot, state: FSMContext, settings: Settings) -> None:
     """Handle voice/text input after /do command."""
-    await state.clear()  # Clear state immediately
+    await state.clear()
 
     prompt = None
 
-    # Handle voice input
     if message.voice:
         await message.chat.do(action="typing")
-        settings = get_settings()
         transcriber = DeepgramTranscriber(settings.deepgram_api_key)
 
         try:
@@ -71,52 +67,41 @@ async def handle_do_input(message: Message, bot: Bot, state: FSMContext) -> None
             await message.answer("❌ Не удалось распознать речь")
             return
 
-        # Echo transcription to user
         await message.answer(f"🎤 <i>{prompt}</i>")
 
-    # Handle text input
     elif message.text:
         prompt = message.text
-
     else:
         await message.answer("❌ Отправь текст или голосовое сообщение")
         return
 
     user_id = message.from_user.id if message.from_user else 0
-    await process_request(message, prompt, user_id)
+    await process_request(message, prompt, user_id, settings)
 
 
-async def process_request(message: Message, prompt: str, user_id: int = 0) -> None:
+async def process_request(
+    message: Message,
+    prompt: str,
+    user_id: int = 0,
+    settings: Settings | None = None,
+) -> None:
     """Process the user's request with Claude."""
+    if settings is None:
+        from d_brain.config import get_settings
+        settings = get_settings()
+
     status_msg = await message.answer("⏳ Выполняю...")
 
-    settings = get_settings()
-    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key)
+    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key, settings.notion_token)
 
-    async def run_with_progress() -> dict:
-        task = asyncio.create_task(
-            asyncio.to_thread(processor.execute_prompt, prompt, user_id)
-        )
-
-        elapsed = 0
-        while not task.done():
-            await asyncio.sleep(30)
-            elapsed += 30
-            if not task.done():
-                try:
-                    await status_msg.edit_text(
-                        f"⏳ Выполняю... ({elapsed // 60}m {elapsed % 60}s)"
-                    )
-                except Exception:
-                    pass
-
-        return await task
-
-    report = await run_with_progress()
+    report = await run_with_progress(
+        status_msg,
+        "Выполняю...",
+        lambda: processor.execute_prompt(prompt, user_id),
+    )
 
     formatted = format_process_report(report)
     try:
         await status_msg.edit_text(formatted)
     except Exception:
-        # Fallback: send without HTML parsing
         await status_msg.edit_text(formatted, parse_mode=None)

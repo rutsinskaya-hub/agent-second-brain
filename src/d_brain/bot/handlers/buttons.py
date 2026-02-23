@@ -5,32 +5,33 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from d_brain.bot.states import DoCommandState
+from d_brain.config import Settings
 
 router = Router(name="buttons")
 
 
 @router.message(F.text == "📊 Статус")
-async def btn_status(message: Message) -> None:
+async def btn_status(message: Message, settings: Settings) -> None:
     """Handle Status button."""
     from d_brain.bot.handlers.commands import cmd_status
 
-    await cmd_status(message)
+    await cmd_status(message, settings)
 
 
 @router.message(F.text == "⚙️ Обработать")
-async def btn_process(message: Message) -> None:
+async def btn_process(message: Message, settings: Settings) -> None:
     """Handle Process button."""
     from d_brain.bot.handlers.process import cmd_process
 
-    await cmd_process(message)
+    await cmd_process(message, settings)
 
 
 @router.message(F.text == "📅 Неделя")
-async def btn_weekly(message: Message) -> None:
+async def btn_weekly(message: Message, settings: Settings) -> None:
     """Handle Weekly button."""
     from d_brain.bot.handlers.weekly import cmd_weekly
 
-    await cmd_weekly(message)
+    await cmd_weekly(message, settings)
 
 
 @router.message(F.text == "✨ Запрос")

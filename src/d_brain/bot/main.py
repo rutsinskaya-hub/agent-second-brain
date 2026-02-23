@@ -85,6 +85,9 @@ async def run_bot(settings: Settings) -> None:
     bot = create_bot(settings)
     dp = create_dispatcher()
 
+    # Inject settings into all handlers via aiogram DI
+    dp["settings"] = settings
+
     # Always add auth middleware for security (it handles allow_all_users internally)
     dp.update.middleware(create_auth_middleware(settings))
 

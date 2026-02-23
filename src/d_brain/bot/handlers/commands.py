@@ -7,7 +7,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from d_brain.bot.keyboards import get_main_keyboard
-from d_brain.config import get_settings
+from d_brain.config import Settings
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
 
@@ -56,13 +56,11 @@ async def cmd_help(message: Message) -> None:
 
 
 @router.message(Command("status"))
-async def cmd_status(message: Message) -> None:
+async def cmd_status(message: Message, settings: Settings) -> None:
     """Handle /status command."""
     user_id = message.from_user.id if message.from_user else 0
-    settings = get_settings()
     storage = VaultStorage(settings.vault_path)
 
-    # Log command
     session = SessionStore(settings.vault_path)
     session.append(user_id, "command", cmd="/status")
 
@@ -83,7 +81,6 @@ async def cmd_status(message: Message) -> None:
 
     total = len(entries)
 
-    # Get weekly stats from session
     week_stats = ""
     stats = session.get_stats(user_id, days=7)
     if stats:

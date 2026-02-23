@@ -6,7 +6,7 @@ from datetime import datetime
 from aiogram import Router
 from aiogram.types import Message
 
-from d_brain.config import get_settings
+from d_brain.config import Settings
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
 
@@ -15,18 +15,16 @@ logger = logging.getLogger(__name__)
 
 
 @router.message(lambda m: m.text is not None and not m.text.startswith("/"))
-async def handle_text(message: Message) -> None:
+async def handle_text(message: Message, settings: Settings) -> None:
     """Handle text messages (excluding commands)."""
     if not message.text or not message.from_user:
         return
 
-    settings = get_settings()
     storage = VaultStorage(settings.vault_path)
 
     timestamp = datetime.fromtimestamp(message.date.timestamp())
     storage.append_to_daily(message.text, timestamp, "[text]")
 
-    # Log to session
     session = SessionStore(settings.vault_path)
     session.append(
         message.from_user.id,
