@@ -38,7 +38,16 @@ REPORT=$(claude --print --dangerously-skip-permissions \
    - timeMin: \"${TODAY}T00:00:00Z\"
    - timeMax: \"${TODAY}T23:59:59Z\"
 
-2. Вызови mcp__notion__API-post-search с filter={\"property\":\"object\",\"value\":\"page\"} и query=\"задачи сегодня\" чтобы найти задачи на сегодня. Если не нашёл — попробуй query=\"todo\" или query=\"задачи\".
+2. Получи задачи из Notion базы данных "Задачи и поручения" (ID: 305289eb-342c-80ec-856d-f1c014cdff68).
+   Вызови mcp__notion__API-post-search с параметрами:
+   - filter: {\"property\": \"object\", \"value\": \"page\"}
+   - query: \"\" (пустой)
+   - Затем отфильтруй только те, у которых parent.database_id = 305289eb-342c-80ec-856d-f1c014cdff68
+   Показывай задачи в таком приоритете:
+   a) Срок выполнения = сегодня ($TODAY)
+   b) Status = "In progress"
+   c) Если ничего — топ-5 задач со статусом "Not started"
+   Не показывай задачи со статусом "Done".
 
 3. Прочитай файл goals/3-weekly.md
 
