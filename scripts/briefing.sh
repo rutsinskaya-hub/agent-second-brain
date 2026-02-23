@@ -95,7 +95,9 @@ REPORT_CLEAN=$(echo "$REPORT" \
     | sed 's/\*\*\(.*\)\*\*/\1/g' \
     | sed 's/\*\([^*]*\)\*/\1/g' \
     | sed '/^---*$/d' \
-    | sed '/^|.*|$/d')
+    | sed '/^|.*|$/d' \
+    | sed 's/^\(🌅[^<]*\)$/\1/' \
+    | sed 's/^\([📅🔴✅🎯💪🗓️⬜]\) \(<b>\)\{0\}\(.*\)$/\1 <b>\3<\/b>/')
 
 if [ -n "$REPORT_CLEAN" ] && [ -n "$CHAT_ID" ]; then
     echo "=== Sending briefing to Telegram ==="
