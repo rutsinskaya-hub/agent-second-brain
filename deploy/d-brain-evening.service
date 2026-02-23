@@ -1,0 +1,9 @@
+[Unit]
+Description=d-brain Evening Summary
+
+[Service]
+Type=oneshot
+User=myuser
+WorkingDirectory=/home/myuser/projects/agent-second-brain
+ExecStart=/home/myuser/projects/agent-second-brain/scripts/evening.sh
+Environment=PYTHONUNBUFFERED=1
