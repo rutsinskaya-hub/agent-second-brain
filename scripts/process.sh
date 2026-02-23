@@ -24,6 +24,7 @@ fi
 # MCP timeout for stdio server (default 5 sec is too short)
 export MCP_TIMEOUT=30000
 export MAX_MCP_OUTPUT_TOKENS=50000
+export GOOGLE_OAUTH_CREDENTIALS="/home/myuser/projects/agent-second-brain/gcp-oauth.keys.json"
 
 # Date and chat_id
 TODAY=$(date +%Y-%m-%d)

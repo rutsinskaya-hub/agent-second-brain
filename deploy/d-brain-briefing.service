@@ -1,0 +1,9 @@
+[Unit]
+Description=d-brain Morning Briefing
+
+[Service]
+Type=oneshot
+User=myuser
+WorkingDirectory=/home/myuser/projects/agent-second-brain
+ExecStart=/home/myuser/projects/agent-second-brain/scripts/briefing.sh
+Environment=PYTHONUNBUFFERED=1

@@ -4,6 +4,14 @@
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "@notionhq/notion-mcp-server"]
+    },
+    "google-calendar": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@cocal/google-calendar-mcp"],
+      "env": {
+        "GOOGLE_OAUTH_CREDENTIALS": "/home/myuser/projects/agent-second-brain/gcp-oauth.keys.json"
+      }
     }
   }
 }
