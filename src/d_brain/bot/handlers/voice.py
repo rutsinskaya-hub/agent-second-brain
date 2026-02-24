@@ -6,7 +6,11 @@ from datetime import datetime
 from aiogram import Bot, Router
 from aiogram.types import Message
 
+from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
+from d_brain.services.intent import Intent, classify, extract_due_date, extract_task_name
+from d_brain.services.notion import NotionClient
+from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
 from d_brain.services.transcription import DeepgramTranscriber
@@ -17,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @router.message(lambda m: m.voice is not None)
 async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
-    """Handle voice messages."""
+    """Handle voice messages with intent routing."""
     if not message.voice or not message.from_user:
         return
 
@@ -45,20 +49,95 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
             return
 
         timestamp = datetime.fromtimestamp(message.date.timestamp())
-        storage.append_to_daily(transcript, timestamp, "[voice]")
+        user_id = message.from_user.id
 
         session = SessionStore(settings.vault_path)
-        session.append(
-            message.from_user.id,
-            "voice",
-            text=transcript,
-            duration=message.voice.duration,
-            msg_id=message.message_id,
-        )
 
-        await message.answer(f"🎤 {transcript}\n\n✓ Сохранено")
-        logger.info("Voice message saved: %d chars", len(transcript))
+        # ── Intent routing ────────────────────────────────────────────────
+        intent = classify(transcript) if settings.notion_token else Intent.SAVE
+
+        if intent == Intent.CREATE_TASK:
+            await _handle_create_task(message, transcript, timestamp, storage, session, user_id, settings)
+
+        elif intent == Intent.NOTION_ACTION:
+            await _handle_notion_action(message, transcript, timestamp, storage, session, user_id, settings)
+
+        else:
+            # Default: save to vault
+            storage.append_to_daily(transcript, timestamp, "[voice]")
+            session.append(user_id, "voice", text=transcript,
+                           duration=message.voice.duration, msg_id=message.message_id)
+            await message.answer(f"🎤 {transcript}\n\n✓ Сохранено")
+            logger.info("Voice saved: %d chars", len(transcript))
 
     except Exception as e:
         logger.exception("Error processing voice message")
         await message.answer(f"❌ Ошибка: {e}")
+
+
+async def _handle_create_task(
+    message: Message,
+    transcript: str,
+    timestamp: datetime,
+    storage: VaultStorage,
+    session: SessionStore,
+    user_id: int,
+    settings: Settings,
+) -> None:
+    """Fast path: create Notion task directly."""
+    task_name = extract_task_name(transcript)
+    due_date = extract_due_date(transcript)
+
+    try:
+        client = NotionClient(settings.notion_token)
+        await client.create_task(task_name, due_date)
+    except Exception as e:
+        logger.exception("Failed to create Notion task from voice")
+        await message.answer(f"🎤 <i>{transcript}</i>\n\n❌ Не удалось создать задачу: {e}")
+        return
+
+    due_info = f"\n📅 Срок: <b>{due_date}</b>" if due_date else ""
+    await message.answer(
+        f"🎤 <i>{transcript}</i>\n\n"
+        f"✅ Задача добавлена в Notion\n"
+        f"📝 <b>{task_name}</b>{due_info}"
+    )
+    storage.append_to_daily(transcript, timestamp, "[voice][task]")
+    session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
+    logger.info("Notion task created from voice: %s (due: %s)", task_name, due_date)
+
+
+async def _handle_notion_action(
+    message: Message,
+    transcript: str,
+    timestamp: datetime,
+    storage: VaultStorage,
+    session: SessionStore,
+    user_id: int,
+    settings: Settings,
+) -> None:
+    """Slow path: delegate to Claude with Notion MCP."""
+    status_msg = await message.answer(f"🎤 <i>{transcript}</i>\n\n⏳ Выполняю...")
+
+    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key, settings.notion_token)
+
+    result = await run_with_progress(
+        status_msg,
+        "Выполняю...",
+        lambda: processor.execute_prompt(transcript, user_id),
+    )
+
+    if "error" in result:
+        await status_msg.edit_text(
+            f"🎤 <i>{transcript}</i>\n\n❌ {result['error']}"
+        )
+    else:
+        report = result.get("report", "✓ Выполнено")
+        try:
+            await status_msg.edit_text(f"🎤 <i>{transcript}</i>\n\n{report}")
+        except Exception:
+            await status_msg.edit_text(f"🎤 <i>{transcript}</i>\n\n{report}", parse_mode=None)
+
+    storage.append_to_daily(transcript, timestamp, "[voice][action]")
+    session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
+    logger.info("Notion action from voice: %s", transcript[:60])

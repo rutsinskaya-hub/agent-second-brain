@@ -6,7 +6,11 @@ from datetime import datetime
 from aiogram import Router
 from aiogram.types import Message
 
+from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
+from d_brain.services.intent import Intent, classify, extract_due_date, extract_task_name
+from d_brain.services.notion import NotionClient
+from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
 
@@ -16,22 +20,65 @@ logger = logging.getLogger(__name__)
 
 @router.message(lambda m: m.text is not None and not m.text.startswith("/"))
 async def handle_text(message: Message, settings: Settings) -> None:
-    """Handle text messages (excluding commands)."""
+    """Handle text messages with intent routing."""
     if not message.text or not message.from_user:
         return
 
+    text = message.text
     storage = VaultStorage(settings.vault_path)
-
     timestamp = datetime.fromtimestamp(message.date.timestamp())
-    storage.append_to_daily(message.text, timestamp, "[text]")
-
+    user_id = message.from_user.id
     session = SessionStore(settings.vault_path)
-    session.append(
-        message.from_user.id,
-        "text",
-        text=message.text,
-        msg_id=message.message_id,
-    )
 
-    await message.answer("✓ Сохранено")
-    logger.info("Text message saved: %d chars", len(message.text))
+    # ── Intent routing ────────────────────────────────────────────────────
+    intent = classify(text) if settings.notion_token else Intent.SAVE
+
+    if intent == Intent.CREATE_TASK:
+        task_name = extract_task_name(text)
+        due_date = extract_due_date(text)
+
+        try:
+            client = NotionClient(settings.notion_token)
+            await client.create_task(task_name, due_date)
+        except Exception as e:
+            logger.exception("Failed to create Notion task from text")
+            await message.answer(f"❌ Не удалось создать задачу: {e}")
+            return
+
+        due_info = f"\n📅 Срок: <b>{due_date}</b>" if due_date else ""
+        await message.answer(
+            f"✅ Задача добавлена в Notion\n"
+            f"📝 <b>{task_name}</b>{due_info}"
+        )
+        storage.append_to_daily(text, timestamp, "[text][task]")
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
+        logger.info("Notion task created from text: %s", task_name)
+
+    elif intent == Intent.NOTION_ACTION:
+        status_msg = await message.answer("⏳ Выполняю...")
+        processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key, settings.notion_token)
+
+        result = await run_with_progress(
+            status_msg,
+            "Выполняю...",
+            lambda: processor.execute_prompt(text, user_id),
+        )
+
+        if "error" in result:
+            await status_msg.edit_text(f"❌ {result['error']}")
+        else:
+            report = result.get("report", "✓ Выполнено")
+            try:
+                await status_msg.edit_text(report)
+            except Exception:
+                await status_msg.edit_text(report, parse_mode=None)
+
+        storage.append_to_daily(text, timestamp, "[text][action]")
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
+
+    else:
+        # Default: save to vault
+        storage.append_to_daily(text, timestamp, "[text]")
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
+        await message.answer("✓ Сохранено")
+        logger.info("Text saved: %d chars", len(text))

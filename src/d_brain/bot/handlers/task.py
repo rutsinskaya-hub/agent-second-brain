@@ -1,8 +1,6 @@
 """Handler for /task command — instant Notion task creation."""
 
 import logging
-import re
-from datetime import date, timedelta
 
 from aiogram import Router
 from aiogram.filters import Command, CommandObject
@@ -11,36 +9,11 @@ from aiogram.types import Message
 
 from d_brain.bot.states import TaskCommandState
 from d_brain.config import Settings
+from d_brain.services.intent import extract_due_date
 from d_brain.services.notion import NotionClient
 
 router = Router(name="task")
 logger = logging.getLogger(__name__)
-
-# Patterns to detect date hints in task text
-_TODAY_RE = re.compile(r"\bсегодня\b", re.IGNORECASE)
-_TOMORROW_RE = re.compile(r"\bзавтра\b", re.IGNORECASE)
-_DATE_RE = re.compile(r"\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b")
-
-
-def _extract_due_date(text: str) -> str | None:
-    """Try to detect a due date hint in the task text."""
-    today = date.today()
-    if _TODAY_RE.search(text):
-        return today.isoformat()
-    if _TOMORROW_RE.search(text):
-        return (today + timedelta(days=1)).isoformat()
-    m = _DATE_RE.search(text)
-    if m:
-        day, month = int(m.group(1)), int(m.group(2))
-        year_raw = m.group(3)
-        year = int(year_raw) if year_raw else today.year
-        if year < 100:
-            year += 2000
-        try:
-            return date(year, month, day).isoformat()
-        except ValueError:
-            pass
-    return None
 
 
 @router.message(Command("task"))
@@ -77,7 +50,7 @@ async def _create_task(message: Message, text: str, settings: Settings) -> None:
         await message.answer("❌ NOTION_TOKEN не настроен")
         return
 
-    due_date = _extract_due_date(text)
+    due_date = extract_due_date(text)
 
     try:
         client = NotionClient(settings.notion_token)
