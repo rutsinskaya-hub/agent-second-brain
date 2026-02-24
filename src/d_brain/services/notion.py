@@ -30,11 +30,11 @@ class NotionClient:
         Returns the URL of the created page.
         """
         properties: dict = {
-            "Name": {"title": [{"text": {"content": title}}]},
+            "Задача": {"title": [{"text": {"content": title}}]},
             "Status": {"status": {"name": "Not started"}},
         }
         if due_date:
-            properties["Due date"] = {"date": {"start": due_date}}
+            properties["Срок выполнения"] = {"date": {"start": due_date}}
 
         payload = {
             "parent": {"database_id": TASKS_DB_ID},
@@ -65,27 +65,22 @@ class NotionClient:
         query_type: "overdue" | "today" | "tomorrow" | "in_progress" | "all"
         Returns list of simplified task dicts: {name, status, due_date}
         """
-        today = date.today().isoformat()
-        tomorrow = (date.today().replace(day=date.today().day + 1) if date.today().day < 28
-                    else (date.today().replace(month=date.today().month + 1, day=1)
-                          if date.today().month < 12
-                          else date(date.today().year + 1, 1, 1))).isoformat()
-        # Simpler tomorrow calculation
         from datetime import timedelta
+        today = date.today().isoformat()
         tomorrow = (date.today() + timedelta(days=1)).isoformat()
 
         filters: dict = {}
         if query_type == "overdue":
             filters = {
                 "and": [
-                    {"property": "Due date", "date": {"before": today}},
+                    {"property": "Срок выполнения", "date": {"before": today}},
                     {"property": "Status", "status": {"does_not_equal": "Done"}},
                 ]
             }
         elif query_type == "today":
-            filters = {"property": "Due date", "date": {"equals": today}}
+            filters = {"property": "Срок выполнения", "date": {"equals": today}}
         elif query_type == "tomorrow":
-            filters = {"property": "Due date", "date": {"equals": tomorrow}}
+            filters = {"property": "Срок выполнения", "date": {"equals": tomorrow}}
         elif query_type == "in_progress":
             filters = {"property": "Status", "status": {"equals": "In progress"}}
         else:  # all — exclude Done
@@ -93,7 +88,7 @@ class NotionClient:
 
         payload: dict = {
             "filter": filters,
-            "sorts": [{"property": "Due date", "direction": "ascending"}],
+            "sorts": [{"property": "Срок выполнения", "direction": "ascending"}],
             "page_size": limit,
         }
 
@@ -111,17 +106,17 @@ class NotionClient:
         tasks = []
         for page in results:
             props = page.get("properties", {})
-            # Extract task name
-            title_prop = props.get("Name", props.get("Название", {}))
+            # Extract task name — property is "Задача" (title type)
+            title_prop = props.get("Задача", {})
             title_parts = title_prop.get("title", [])
             name = "".join(t.get("plain_text", "") for t in title_parts).strip()
             if not name:
                 continue
             # Extract status
-            status_prop = props.get("Status", props.get("Статус", {}))
+            status_prop = props.get("Status", {})
             status = status_prop.get("status", {}).get("name", "") if status_prop else ""
-            # Extract due date
-            due_prop = props.get("Due date", props.get("Дедлайн", props.get("Срок", {})))
+            # Extract due date — property is "Срок выполнения"
+            due_prop = props.get("Срок выполнения", {})
             due_date = ""
             if due_prop and due_prop.get("date"):
                 due_date = due_prop["date"].get("start", "")
