@@ -58,7 +58,7 @@ class NotionClient:
     async def query_tasks(
         self,
         query_type: str = "all",
-        limit: int = 10,
+        limit: int = 50,
     ) -> list[dict]:
         """Query tasks from the database.
 
@@ -102,7 +102,9 @@ class NotionClient:
         if resp.status_code != 200:
             raise RuntimeError(f"Notion API вернул {resp.status_code}: {resp.text[:200]}")
 
-        results = resp.json().get("results", [])
+        data = resp.json()
+        results = data.get("results", [])
+        self._last_has_more = data.get("has_more", False)
         tasks = []
         for page in results:
             props = page.get("properties", {})
@@ -147,7 +149,5 @@ def _format_tasks_reply(tasks: list[dict], query_type: str) -> str:
         status = f" [{t['status']}]" if t.get("status") and query_type == "all" else ""
         lines.append(f"• {name}{due}{status}")
 
-    if len(tasks) == 10:
-        lines.append("<i>...показаны первые 10</i>")
-
+    lines.append(f"\n<i>Всего: {len(tasks)}</i>")
     return "\n".join(lines)
