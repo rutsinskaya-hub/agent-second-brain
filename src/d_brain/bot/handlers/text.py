@@ -8,8 +8,8 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, extract_due_date, extract_task_name
-from d_brain.services.notion import NotionClient
+from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_task_name
+from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
@@ -53,6 +53,19 @@ async def handle_text(message: Message, settings: Settings) -> None:
         storage.append_to_daily(text, timestamp, "[text][task]")
         session.append(user_id, "text", text=text, msg_id=message.message_id)
         logger.info("Notion task created from text: %s", task_name)
+
+    elif intent == Intent.QUERY_TASKS:
+        query_type = classify_query(text)
+        try:
+            client = NotionClient(settings.notion_token)
+            tasks = await client.query_tasks(query_type.value)
+        except Exception as e:
+            logger.exception("Failed to query Notion tasks")
+            await message.answer(f"❌ Не удалось получить задачи: {e}")
+            return
+        await message.answer(_format_tasks_reply(tasks, query_type.value))
+        storage.append_to_daily(text, timestamp, "[text][query]")
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
 
     elif intent == Intent.NOTION_ACTION:
         status_msg = await message.answer("⏳ Выполняю...")

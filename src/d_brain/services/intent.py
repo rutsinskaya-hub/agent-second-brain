@@ -13,8 +13,17 @@ from enum import Enum
 
 class Intent(Enum):
     CREATE_TASK = "create_task"
-    NOTION_ACTION = "notion_action"
+    QUERY_TASKS = "query_tasks"    # Fast: read from Notion API directly
+    NOTION_ACTION = "notion_action"  # Slow: update/write via Claude + MCP
     SAVE = "save"
+
+
+class QueryType(Enum):
+    OVERDUE = "overdue"
+    TODAY = "today"
+    TOMORROW = "tomorrow"
+    IN_PROGRESS = "in_progress"
+    ALL = "all"
 
 
 # ── Intent patterns ────────────────────────────────────────────────────────
@@ -25,15 +34,19 @@ _CREATE_PATTERNS = [
     r"\bнапомни\s+(мне\s+)?о\b",     # "напомни мне о встрече"
 ]
 
-_ACTION_PATTERNS = [
-    # Read / query Notion
-    r"\b(покажи|покажи?те|отобрази|выведи|список|какие|что)\s+.{0,30}(задач|задани)",
+_QUERY_PATTERNS = [
+    r"\b(покажи|покажи?те|отобрази|выведи|список)\s+.{0,30}(задач|задани)",
     r"\bкакие\s+(у меня\s+)?(задач|задани|дела)\b",
-    r"\b(просроченн|на сегодня|на завтра|незакрыт|активн|в процессе|не сделан)\b.{0,20}задач",
-    r"\bзадач.{0,20}(просроченн|на сегодня|на завтра|незакрыт|активн|в процессе)\b",
-    r"\bчто\s+(у меня\s+)?(стоит|есть|висит|осталось)\b",
+    r"\b(просроченн|незакрыт|активн|не сделан)\b.{0,20}задач",
+    r"\bзадач.{0,20}(просроченн|незакрыт|активн)\b",
+    r"\bчто\s+(у меня\s+)?(стоит|есть|висит|осталось|запланировано)\b",
     r"\bпланы?\s+на\s+(сегодня|завтра|неделю)\b",
     r"\b(найди|найти|поиск)\s+задач",
+    r"\bзадач(и|у|)\s+(на\s+)?(сегодня|завтра|эту неделю)\b",
+    r"\bчто\s+надо\s+(сделать|успеть)\b",
+]
+
+_ACTION_PATTERNS = [
     # Mark done
     r"\b(отметь|помети|поставь)\s+.{0,40}(выполнен|готов|сделан|закрыт)",
     r"\b(выполнил[аи]?|сделал[аи]?|закрыл[аи]?)\s+(задачу|это|её)\b",
@@ -52,10 +65,27 @@ def classify(text: str) -> Intent:
     for pattern in _CREATE_PATTERNS:
         if re.search(pattern, t):
             return Intent.CREATE_TASK
+    for pattern in _QUERY_PATTERNS:
+        if re.search(pattern, t):
+            return Intent.QUERY_TASKS
     for pattern in _ACTION_PATTERNS:
         if re.search(pattern, t):
             return Intent.NOTION_ACTION
     return Intent.SAVE
+
+
+def classify_query(text: str) -> QueryType:
+    """Classify the type of task query."""
+    t = text.lower()
+    if re.search(r"\bпросрочен", t):
+        return QueryType.OVERDUE
+    if re.search(r"\bзавтра\b", t):
+        return QueryType.TOMORROW
+    if re.search(r"\bсегодня\b|\bсейчас\b|\bна\s+день\b", t):
+        return QueryType.TODAY
+    if re.search(r"\b(в\s+процессе|in\s+progress|активн|незакрыт|не\s+сделан)\b", t):
+        return QueryType.IN_PROGRESS
+    return QueryType.ALL
 
 
 # ── Task name extraction ────────────────────────────────────────────────────

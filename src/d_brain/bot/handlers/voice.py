@@ -8,8 +8,8 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, extract_due_date, extract_task_name
-from d_brain.services.notion import NotionClient
+from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_task_name
+from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
 from d_brain.services.storage import VaultStorage
@@ -59,6 +59,9 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
         if intent == Intent.CREATE_TASK:
             await _handle_create_task(message, transcript, timestamp, storage, session, user_id, settings)
 
+        elif intent == Intent.QUERY_TASKS:
+            await _handle_query_tasks(message, transcript, timestamp, storage, session, user_id, settings)
+
         elif intent == Intent.NOTION_ACTION:
             await _handle_notion_action(message, transcript, timestamp, storage, session, user_id, settings)
 
@@ -105,6 +108,32 @@ async def _handle_create_task(
     storage.append_to_daily(transcript, timestamp, "[voice][task]")
     session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
     logger.info("Notion task created from voice: %s (due: %s)", task_name, due_date)
+
+
+async def _handle_query_tasks(
+    message: Message,
+    transcript: str,
+    timestamp: datetime,
+    storage: VaultStorage,
+    session: SessionStore,
+    user_id: int,
+    settings: Settings,
+) -> None:
+    """Fast path: query Notion tasks directly."""
+    query_type = classify_query(transcript)
+
+    try:
+        client = NotionClient(settings.notion_token)
+        tasks = await client.query_tasks(query_type.value)
+    except Exception as e:
+        logger.exception("Failed to query Notion tasks")
+        await message.answer(f"🎤 <i>{transcript}</i>\n\n❌ Не удалось получить задачи: {e}")
+        return
+
+    reply = _format_tasks_reply(tasks, query_type.value)
+    await message.answer(f"🎤 <i>{transcript}</i>\n\n{reply}")
+    storage.append_to_daily(transcript, timestamp, "[voice][query]")
+    session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
 
 
 async def _handle_notion_action(

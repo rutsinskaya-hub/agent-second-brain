@@ -114,6 +114,8 @@ week: {year}-W{week:02d}
         Callers only need to build the prompt and handle any post-processing.
         """
         env = os.environ.copy()
+        env["MCP_TIMEOUT"] = "30000"
+        env["MAX_MCP_OUTPUT_TOKENS"] = "50000"
         if self.todoist_api_key:
             env["TODOIST_API_KEY"] = self.todoist_api_key
         if self.notion_token:
