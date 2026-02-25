@@ -10,7 +10,7 @@ import httpx
 logger = logging.getLogger(__name__)
 
 NOTION_API_URL = "https://api.notion.com/v1"
-NOTION_VERSION = "2022-06-28"
+NOTION_VERSION = "2025-02-13"
 TASKS_DB_ID = "305289eb-342c-80ec-856d-f1c014cdff68"
 
 

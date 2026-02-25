@@ -121,7 +121,7 @@ week: {year}-W{week:02d}
         if self.notion_token:
             env["OPENAPI_MCP_HEADERS"] = json.dumps({
                 "Authorization": f"Bearer {self.notion_token}",
-                "Notion-Version": "2022-06-28",
+                "Notion-Version": "2025-02-13",
             })
 
         try:
