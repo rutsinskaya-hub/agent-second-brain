@@ -148,7 +148,7 @@ async def _handle_notion_action(
     """Slow path: delegate to Claude with Notion MCP."""
     status_msg = await message.answer(f"🎤 <i>{transcript}</i>\n\n⏳ Выполняю...")
 
-    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key, settings.notion_token)
+    processor = ClaudeProcessor(settings.vault_path, settings.notion_token)
 
     result = await run_with_progress(
         status_msg,

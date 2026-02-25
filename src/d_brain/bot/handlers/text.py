@@ -69,7 +69,7 @@ async def handle_text(message: Message, settings: Settings) -> None:
 
     elif intent == Intent.NOTION_ACTION:
         status_msg = await message.answer("⏳ Выполняю...")
-        processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key, settings.notion_token)
+        processor = ClaudeProcessor(settings.vault_path, settings.notion_token)
 
         result = await run_with_progress(
             status_msg,

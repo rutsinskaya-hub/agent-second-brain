@@ -92,7 +92,7 @@ async def process_request(
 
     status_msg = await message.answer("⏳ Выполняю...")
 
-    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key, settings.notion_token)
+    processor = ClaudeProcessor(settings.vault_path, settings.notion_token)
 
     report = await run_with_progress(
         status_msg,

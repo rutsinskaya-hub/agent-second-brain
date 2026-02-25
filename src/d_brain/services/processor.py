@@ -17,9 +17,8 @@ DEFAULT_TIMEOUT = 1200  # 20 minutes
 class ClaudeProcessor:
     """Service for triggering Claude Code processing."""
 
-    def __init__(self, vault_path: Path, todoist_api_key: str = "", notion_token: str = "") -> None:
+    def __init__(self, vault_path: Path, notion_token: str = "") -> None:
         self.vault_path = Path(vault_path)
-        self.todoist_api_key = todoist_api_key
         self.notion_token = notion_token
         self._mcp_config_path = (self.vault_path.parent / "mcp-config.json").resolve()
 
@@ -32,13 +31,6 @@ class ClaudeProcessor:
         skill_path = self.vault_path / ".claude/skills/dbrain-processor/SKILL.md"
         if skill_path.exists():
             return skill_path.read_text()
-        return ""
-
-    def _load_todoist_reference(self) -> str:
-        """Load Todoist reference for inclusion in prompt."""
-        ref_path = self.vault_path / ".claude/skills/dbrain-processor/references/todoist.md"
-        if ref_path.exists():
-            return ref_path.read_text()
         return ""
 
     def _get_session_context(self, user_id: int) -> str:
@@ -115,8 +107,6 @@ week: {year}-W{week:02d}
         env = os.environ.copy()
         env["MCP_TIMEOUT"] = "30000"
         env["MAX_MCP_OUTPUT_TOKENS"] = "50000"
-        if self.todoist_api_key:
-            env["TODOIST_API_KEY"] = self.todoist_api_key
         if self.notion_token:
             env["NOTION_TOKEN"] = self.notion_token
 
@@ -172,13 +162,9 @@ week: {year}-W{week:02d}
 {skill_content}
 === END SKILL ===
 
-ПЕРВЫМ ДЕЛОМ: вызови mcp__todoist__user-info чтобы убедиться что MCP работает.
-
-CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__todoist__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
-- НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
-- Для задач: вызови mcp__todoist__add-tasks tool
-- Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
+MCP TOOLS:
+- Для задач используй Notion: mcp__notion__API-post-database-query (database_id: "305289eb-342c-80ec-856d-f1c014cdff68")
+- НЕ упоминай Todoist — его нет и не будет
 
 CRITICAL OUTPUT FORMAT:
 - Return ONLY raw HTML for Telegram (parse_mode=HTML)
@@ -192,7 +178,6 @@ CRITICAL OUTPUT FORMAT:
     def execute_prompt(self, user_prompt: str, user_id: int = 0) -> dict[str, Any]:
         """Execute arbitrary prompt with Claude."""
         today = date.today()
-        todoist_ref = self._load_todoist_reference()
         session_context = self._get_session_context(user_id)
 
         prompt = f"""Ты - персональный ассистент d-brain.
@@ -201,16 +186,10 @@ CONTEXT:
 - Текущая дата: {today}
 - Vault path: {self.vault_path}
 
-{session_context}=== TODOIST REFERENCE ===
-{todoist_ref}
-=== END REFERENCE ===
-
-ПЕРВЫМ ДЕЛОМ: вызови mcp__todoist__user-info чтобы убедиться что MCP работает.
-
-CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__todoist__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
-- НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
-- Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
+{session_context}MCP TOOLS:
+- Для задач используй Notion: mcp__notion__API-post-database-query (database_id: "305289eb-342c-80ec-856d-f1c014cdff68")
+- Для создания задач: mcp__notion__API-post-page
+- НЕ упоминай Todoist — его нет и не будет
 
 USER REQUEST:
 {user_prompt}
@@ -224,7 +203,7 @@ CRITICAL OUTPUT FORMAT:
 
 EXECUTION:
 1. Analyze the request
-2. Call MCP tools directly (mcp__todoist__*, read/write files)
+2. Call MCP tools directly (mcp__notion__*, read/write files)
 3. Return HTML status report with results"""
 
         return self._run_claude(prompt)
@@ -234,16 +213,12 @@ EXECUTION:
         today = date.today()
         prompt = f"""Сегодня {today}. Сгенерируй недельный дайджест.
 
-ПЕРВЫМ ДЕЛОМ: вызови mcp__todoist__user-info чтобы убедиться что MCP работает.
-
-CRITICAL MCP RULE:
-- ТЫ ИМЕЕШЬ ДОСТУП к mcp__todoist__* tools — ВЫЗЫВАЙ ИХ НАПРЯМУЮ
-- НИКОГДА не пиши "MCP недоступен" или "добавь вручную"
-- Для выполненных задач: вызови mcp__todoist__find-completed-tasks tool
-- Если tool вернул ошибку — покажи ТОЧНУЮ ошибку в отчёте
+MCP TOOLS:
+- Для задач используй Notion: mcp__notion__API-post-database-query (database_id: "305289eb-342c-80ec-856d-f1c014cdff68")
+- НЕ упоминай Todoist — его нет и не будет
 
 WORKFLOW:
-1. Собери данные за неделю (daily файлы в vault/daily/, completed tasks через MCP)
+1. Собери данные за неделю (daily файлы в vault/daily/, задачи из Notion через MCP)
 2. Проанализируй прогресс по целям (goals/3-weekly.md)
 3. Определи победы и вызовы
 4. Сгенерируй HTML отчёт

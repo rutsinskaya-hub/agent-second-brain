@@ -26,7 +26,7 @@ async def cmd_process(message: Message, settings: Settings) -> None:
 
     status_msg = await message.answer("⏳ Обрабатываю... (может занять до 10 мин)")
 
-    processor = ClaudeProcessor(settings.vault_path, settings.todoist_api_key, settings.notion_token)
+    processor = ClaudeProcessor(settings.vault_path, settings.notion_token)
     git = VaultGit(settings.vault_path)
 
     report = await run_with_progress(
