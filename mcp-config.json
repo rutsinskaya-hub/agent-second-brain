@@ -3,7 +3,7 @@
     "notion": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@notionhq/notion-mcp-server"]
+      "args": ["-y", "@notionhq/notion-mcp-server@1.9.1"]
     },
     "google-calendar": {
       "type": "stdio",

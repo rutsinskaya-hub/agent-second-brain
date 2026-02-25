@@ -48,11 +48,11 @@ REPORT=$(claude --print --dangerously-skip-permissions \
 
 ПОРЯДОК ДЕЙСТВИЙ (выполняй строго по порядку):
 
-1. Получи задачи из Notion базы данных \"Задачи и поручения\" (ID: 305289eb-342c-80ec-856d-f1c014cdff68).
-   Вызови mcp__notion__API-post-search с параметрами:
-   - filter: {\"property\": \"object\", \"value\": \"page\"}
-   - query: \"\" (пустой)
-   - Затем отфильтруй только те, у которых parent.database_id = 305289eb-342c-80ec-856d-f1c014cdff68
+1. Получи задачи из Notion базы данных \"Задачи и поручения\".
+   Вызови mcp__notion__API-post-database-query с параметрами:
+   - database_id: \"305289eb-342c-80ec-856d-f1c014cdff68\"
+   - sorts: [{\"timestamp\": \"last_edited_time\", \"direction\": \"descending\"}]
+   - page_size: 30
    Раздели задачи на:
    a) Status = \"Done\" — сделано сегодня
    b) Status = \"In progress\" — не завершено

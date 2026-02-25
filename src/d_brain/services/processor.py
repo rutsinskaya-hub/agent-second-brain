@@ -1,6 +1,5 @@
 """Claude processing service."""
 
-import json
 import logging
 import os
 import subprocess
@@ -119,10 +118,7 @@ week: {year}-W{week:02d}
         if self.todoist_api_key:
             env["TODOIST_API_KEY"] = self.todoist_api_key
         if self.notion_token:
-            env["OPENAPI_MCP_HEADERS"] = json.dumps({
-                "Authorization": f"Bearer {self.notion_token}",
-                "Notion-Version": "2025-02-13",
-            })
+            env["NOTION_TOKEN"] = self.notion_token
 
         try:
             result = subprocess.run(

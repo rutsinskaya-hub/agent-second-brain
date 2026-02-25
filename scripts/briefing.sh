@@ -51,11 +51,12 @@ REPORT=$(claude --print --dangerously-skip-permissions \
    - timeMin: \"${TODAY}T00:00:00Z\"
    - timeMax: \"${TODAY}T23:59:59Z\"
 
-2. Получи задачи из Notion базы данных "Задачи и поручения" (ID: 305289eb-342c-80ec-856d-f1c014cdff68).
-   Вызови mcp__notion__API-post-search с параметрами:
-   - filter: {\"property\": \"object\", \"value\": \"page\"}
-   - query: \"\" (пустой)
-   - Затем отфильтруй только те, у которых parent.database_id = 305289eb-342c-80ec-856d-f1c014cdff68
+2. Получи задачи из Notion базы данных \"Задачи и поручения\".
+   Вызови mcp__notion__API-post-database-query с параметрами:
+   - database_id: \"305289eb-342c-80ec-856d-f1c014cdff68\"
+   - filter: {\"property\": \"Status\", \"status\": {\"does_not_equal\": \"Done\"}}
+   - sorts: [{\"property\": \"Срок выполнения\", \"direction\": \"ascending\"}]
+   - page_size: 20
    Показывай задачи в таком приоритете:
    a) Срок выполнения = сегодня ($TODAY)
    b) Status = "In progress"
