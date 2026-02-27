@@ -93,10 +93,10 @@ def classify_query(text: str) -> QueryType:
 # ── Task name extraction ────────────────────────────────────────────────────
 
 _TRIGGER_PREFIX = re.compile(
-    r"^(добавь|создай|запиши|поставь|внеси)\s+(задачу|задание|напоминание)[:\s]*",
+    r"^(добавь|создай|запиши|поставь|внеси)\s+(задачу|задание|напоминание)[,;:\s]*",
     re.IGNORECASE,
 )
-_TASK_PREFIX = re.compile(r"^задач[уа][:\s]*", re.IGNORECASE)
+_TASK_PREFIX = re.compile(r"^задач[уа][,;:\s]*", re.IGNORECASE)
 
 
 def extract_task_name(text: str) -> str:
