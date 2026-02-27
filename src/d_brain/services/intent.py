@@ -6,6 +6,8 @@ Three intents:
   SAVE          — default: save to vault as before
 """
 
+from __future__ import annotations
+
 import re
 from datetime import date, timedelta
 from enum import Enum
@@ -103,6 +105,71 @@ def extract_task_name(text: str) -> str:
     t = _TRIGGER_PREFIX.sub("", t)
     t = _TASK_PREFIX.sub("", t)
     return t.strip()
+
+
+# ── Project extraction ──────────────────────────────────────────────────────
+
+_KNOWN_PROJECTS: dict[str, list[str]] = {
+    "Контент-завод": ["контент-завод", "контент завод"],
+    "Видео": ["видео"],
+    "Маркетинговые материалы": ["маркетинговые материалы"],
+    "Стратегия": ["стратегия", "стратегию"],
+    "Лидогенерация": ["лидогенерация", "лидогенерацию"],
+}
+
+_EXPLICIT_PROJECT_RE = re.compile(r"^в\s+проект[еу]?\s+", re.IGNORECASE)
+_IMPLICIT_IN_RE = re.compile(r"^в\s+", re.IGNORECASE)
+_SEP_RE = re.compile(r"^[\s:—\-–,]+")
+
+
+def _match_known_project(text: str) -> tuple[str | None, int]:
+    """Match a known project at the start of *text*. Returns (canonical, length)."""
+    low = text.lower()
+    best: tuple[str | None, int] = (None, 0)
+    for canonical, aliases in _KNOWN_PROJECTS.items():
+        for alias in aliases:
+            if low.startswith(alias) and len(alias) > best[1]:
+                end = len(alias)
+                # word boundary: next char must not be a letter
+                if end >= len(low) or not low[end].isalpha():
+                    best = (canonical, end)
+    return best
+
+
+def extract_project(text: str) -> tuple[str | None, str]:
+    """Extract project from task text.
+
+    Returns (project_name | None, cleaned_task_text).
+    Patterns:
+      - "в проект(е) X ..." → project X (known or unknown)
+      - "в <known_project> ..." → known project only
+    """
+    t = text.strip()
+
+    # 1. Explicit: "в проект(е) X ..."
+    m = _EXPLICIT_PROJECT_RE.match(t)
+    if m:
+        after = t[m.end():]
+        proj, length = _match_known_project(after)
+        if proj:
+            rest = _SEP_RE.sub("", after[length:], count=1).strip()
+            return (proj, rest) if rest else (None, t)
+        # Unknown project — take first word
+        parts = re.split(r"[\s:—\-–]+", after, maxsplit=1)
+        if parts[0]:
+            rest = parts[1].strip() if len(parts) > 1 else ""
+            return (parts[0].strip(), rest) if rest else (None, t)
+
+    # 2. Implicit: "в <known_project> ..."
+    m2 = _IMPLICIT_IN_RE.match(t)
+    if m2:
+        after = t[m2.end():]
+        proj, length = _match_known_project(after)
+        if proj:
+            rest = _SEP_RE.sub("", after[length:], count=1).strip()
+            return (proj, rest) if rest else (None, t)
+
+    return None, t
 
 
 # ── Due date extraction ─────────────────────────────────────────────────────

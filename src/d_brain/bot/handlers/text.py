@@ -8,7 +8,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_task_name
+from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_task_name
 from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
@@ -35,24 +35,26 @@ async def handle_text(message: Message, settings: Settings) -> None:
 
     if intent == Intent.CREATE_TASK:
         task_name = extract_task_name(text)
+        project, task_name = extract_project(task_name)
         due_date = extract_due_date(text)
 
         try:
             client = NotionClient(settings.notion_token)
-            await client.create_task(task_name, due_date)
+            await client.create_task(task_name, due_date, project)
         except Exception as e:
             logger.exception("Failed to create Notion task from text")
             await message.answer(f"❌ Не удалось создать задачу: {e}")
             return
 
+        project_info = f"\n📁 Проект: <b>{project}</b>" if project else ""
         due_info = f"\n📅 Срок: <b>{due_date}</b>" if due_date else ""
         await message.answer(
             f"✅ Задача добавлена в Notion\n"
-            f"📝 <b>{task_name}</b>{due_info}"
+            f"📝 <b>{task_name}</b>{project_info}{due_info}"
         )
         storage.append_to_daily(text, timestamp, "[text][task]")
         session.append(user_id, "text", text=text, msg_id=message.message_id)
-        logger.info("Notion task created from text: %s", task_name)
+        logger.info("Notion task created from text: %s (project: %s)", task_name, project)
 
     elif intent == Intent.QUERY_TASKS:
         query_type = classify_query(text)

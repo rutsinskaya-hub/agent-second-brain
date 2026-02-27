@@ -24,7 +24,12 @@ class NotionClient:
             "Content-Type": "application/json",
         }
 
-    async def create_task(self, title: str, due_date: str | None = None) -> str:
+    async def create_task(
+        self,
+        title: str,
+        due_date: str | None = None,
+        project: str | None = None,
+    ) -> str:
         """Create a task in the Задачи и поручения database.
 
         Returns the URL of the created page.
@@ -35,6 +40,8 @@ class NotionClient:
         }
         if due_date:
             properties["Срок выполнения"] = {"date": {"start": due_date}}
+        if project:
+            properties["Проект"] = {"multi_select": [{"name": project}]}
 
         payload = {
             "parent": {"database_id": TASKS_DB_ID},

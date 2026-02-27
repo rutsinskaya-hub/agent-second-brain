@@ -9,7 +9,7 @@ from aiogram.types import Message
 
 from d_brain.bot.states import TaskCommandState
 from d_brain.config import Settings
-from d_brain.services.intent import extract_due_date
+from d_brain.services.intent import extract_due_date, extract_project
 from d_brain.services.notion import NotionClient
 
 router = Router(name="task")
@@ -50,20 +50,22 @@ async def _create_task(message: Message, text: str, settings: Settings) -> None:
         await message.answer("❌ NOTION_TOKEN не настроен")
         return
 
+    project, task_text = extract_project(text)
     due_date = extract_due_date(text)
 
     try:
         client = NotionClient(settings.notion_token)
-        url = await client.create_task(text, due_date)
+        url = await client.create_task(task_text, due_date, project)
     except Exception as e:
         logger.exception("Failed to create Notion task")
         await message.answer(f"❌ Не удалось создать задачу: {e}")
         return
 
+    project_info = f"\n📁 Проект: <b>{project}</b>" if project else ""
     due_info = f"\n📅 Срок: <b>{due_date}</b>" if due_date else ""
     await message.answer(
         f"✅ Задача добавлена в Notion\n\n"
-        f"📝 <b>{text}</b>"
-        f"{due_info}"
+        f"📝 <b>{task_text}</b>"
+        f"{project_info}{due_info}"
     )
-    logger.info("Notion task created: %s (due: %s)", text, due_date)
+    logger.info("Notion task created: %s (project: %s, due: %s)", task_text, project, due_date)
