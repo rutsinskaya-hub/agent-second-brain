@@ -41,7 +41,7 @@ class NotionClient:
         if due_date:
             properties["Срок выполнения"] = {"date": {"start": due_date}}
         if project:
-            properties["Проект"] = {"multi_select": [{"name": project}]}
+            properties["Тег проекта"] = {"multi_select": [{"name": project}]}
 
         payload = {
             "parent": {"database_id": TASKS_DB_ID},
