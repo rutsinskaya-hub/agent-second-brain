@@ -49,6 +49,9 @@ _QUERY_PATTERNS = [
     r"\b(найди|найти|поиск)\s+задач",
     r"\bзадач(и|у|)\s+(на\s+)?(сегодня|завтра|эту неделю)\b",
     r"\bчто\s+надо\s+(сделать|успеть)\b",
+    r"\bзадач\w*\s+(в\s+|по\s+)\w",             # "задачи в стратегии", "задачи по проекту"
+    r"\bчто\s+(в|по)\s+проект",                  # "что в проекте X", "что по проекту X"
+    r"\bчто\s+в\s+\w+\b.{0,10}$",               # "что в мероприятиях" (короткая фраза)
 ]
 
 _ACTION_PATTERNS = [
@@ -113,13 +116,13 @@ def extract_task_name(text: str) -> str:
 # ── Project extraction ──────────────────────────────────────────────────────
 
 _KNOWN_PROJECTS: dict[str, list[str]] = {
-    "Контент-завод": ["контент-завод", "контент завод"],
+    "Контент-завод": ["контент-завод", "контент завод", "контент-заводе", "контент заводе"],
     "Видео": ["видео"],
-    "Маркетинговые материалы": ["маркетинговые материалы"],
-    "Стратегия": ["стратегия", "стратегию"],
-    "Лидогенерация": ["лидогенерация", "лидогенерацию"],
-    "Мероприятия": ["мероприятия", "мероприятие"],
-    "Организации и ассоциации": ["организации и ассоциации", "организации", "ассоциации"],
+    "Маркетинговые материалы": ["маркетинговые материалы", "маркетинговых материалах", "маркетинговых материалов"],
+    "Стратегия": ["стратегия", "стратегию", "стратегии"],
+    "Лидогенерация": ["лидогенерация", "лидогенерацию", "лидогенерации"],
+    "Мероприятия": ["мероприятия", "мероприятие", "мероприятиях"],
+    "Организации и ассоциации": ["организации и ассоциации", "организациях и ассоциациях", "организации", "ассоциации", "организациях", "ассоциациях"],
     "Zapusk International": ["запуск international", "zapusk international", "запуск интернешнл", "запуск интернэшнл", "запуск интернешнел", "запуск интернешенал", "запуск интернационал", "запуск интернешнал"],
 }
 
@@ -176,6 +179,40 @@ def extract_project(text: str) -> tuple[str | None, str]:
             return (proj, rest) if rest else (None, t)
 
     return None, t
+
+
+_QUERY_PROJECT_RE = re.compile(
+    r"(?:в\s+проект\w*|по\s+проект\w*)\s+",
+    re.IGNORECASE,
+)
+
+
+def extract_query_project(text: str) -> str | None:
+    """Find a project name mentioned anywhere in query text."""
+    t = text.lower()
+
+    # 1. Explicit: "в проекте X", "по проекту X"
+    m = _QUERY_PROJECT_RE.search(t)
+    if m:
+        after = t[m.end():]
+        proj, _ = _match_known_project(after)
+        if proj:
+            return proj
+        word = re.split(r"[\s,;:]+", after, maxsplit=1)[0].strip()
+        if word:
+            return word
+
+    # 2. Any known project name anywhere in text
+    best: tuple[str | None, int] = (None, 0)
+    for canonical, aliases in _KNOWN_PROJECTS.items():
+        for alias in aliases:
+            idx = t.find(alias)
+            if idx >= 0 and len(alias) > best[1]:
+                end = idx + len(alias)
+                if end >= len(t) or not t[end].isalpha():
+                    if idx == 0 or not t[idx - 1].isalpha():
+                        best = (canonical, len(alias))
+    return best[0]
 
 
 # ── Due date extraction ─────────────────────────────────────────────────────

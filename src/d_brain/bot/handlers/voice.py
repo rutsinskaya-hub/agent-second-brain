@@ -8,7 +8,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_task_name
+from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_query_project, extract_task_name
 from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
@@ -123,16 +123,17 @@ async def _handle_query_tasks(
 ) -> None:
     """Fast path: query Notion tasks directly."""
     query_type = classify_query(transcript)
+    project = extract_query_project(transcript)
 
     try:
         client = NotionClient(settings.notion_token)
-        tasks = await client.query_tasks(query_type.value)
+        tasks = await client.query_tasks(query_type.value, project=project)
     except Exception as e:
         logger.exception("Failed to query Notion tasks")
         await message.answer(f"🎤 <i>{transcript}</i>\n\n❌ Не удалось получить задачи: {e}")
         return
 
-    reply = _format_tasks_reply(tasks, query_type.value)
+    reply = _format_tasks_reply(tasks, query_type.value, project=project)
     await message.answer(f"🎤 <i>{transcript}</i>\n\n{reply}")
     storage.append_to_daily(transcript, timestamp, "[voice][query]")
     session.append(user_id, "voice", text=transcript, msg_id=message.message_id)

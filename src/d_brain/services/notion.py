@@ -66,10 +66,12 @@ class NotionClient:
         self,
         query_type: str = "all",
         limit: int = 50,
+        project: str | None = None,
     ) -> list[dict]:
         """Query tasks from the database.
 
         query_type: "overdue" | "today" | "tomorrow" | "in_progress" | "all"
+        project: optional project name to filter by "Тег проекта"
         Returns list of simplified task dicts: {name, status, due_date}
         """
         from datetime import timedelta
@@ -92,6 +94,13 @@ class NotionClient:
             filters = {"property": "Status", "status": {"equals": "In progress"}}
         else:  # all — exclude Done
             filters = {"property": "Status", "status": {"does_not_equal": "Done"}}
+
+        if project:
+            project_filter = {"property": "Тег проекта", "multi_select": {"contains": project}}
+            if filters:
+                filters = {"and": [filters, project_filter]}
+            else:
+                filters = project_filter
 
         payload: dict = {
             "filter": filters,
@@ -142,9 +151,11 @@ _QUERY_LABELS = {
 }
 
 
-def _format_tasks_reply(tasks: list[dict], query_type: str) -> str:
+def _format_tasks_reply(tasks: list[dict], query_type: str, project: str | None = None) -> str:
     """Format a list of tasks into Telegram HTML."""
     label = _QUERY_LABELS.get(query_type, "📋 Задачи")
+    if project:
+        label = f"📁 {project} — {label.split(' ', 1)[-1]}"
 
     if not tasks:
         return f"{label}\n\nЗадач нет 🎉"
