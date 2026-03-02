@@ -40,6 +40,20 @@ trap '_send_error $LINENO $?' ERR
 
 echo "=== d-brain morning briefing for $TODAY ==="
 
+# Fetch Gmail data (silent if not configured)
+GMAIL_DATA=$(python3 "$PROJECT_DIR/scripts/gmail_fetch.py" 2>/dev/null || true)
+
+# Build Gmail prompt section
+GMAIL_SECTION=""
+if [ -n "$GMAIL_DATA" ]; then
+    GMAIL_SECTION="
+3. Вот данные из Gmail:
+$GMAIL_DATA
+Проанализируй письма. ИГНОРИРУЙ рассылки, уведомления сервисов, спам.
+Из важных писем покажи краткую сводку в секции «📧 Почта».
+"
+fi
+
 cd "$VAULT_DIR"
 REPORT=$(claude --print --dangerously-skip-permissions \
     --mcp-config "$PROJECT_DIR/mcp-config.json" \
@@ -62,10 +76,10 @@ REPORT=$(claude --print --dangerously-skip-permissions \
    b) Status = "In progress"
    c) Если ничего — топ-5 задач со статусом "Not started"
    Не показывай задачи со статусом "Done".
+$GMAIL_SECTION
+Прочитай файл goals/3-weekly.md
 
-3. Прочитай файл goals/3-weekly.md
-
-4. Верни ТОЧНО в таком формате — ничего лишнего, только этот блок:
+Верни ТОЧНО в таком формате — ничего лишнего, только этот блок:
 
 🌅 <b>Доброе утро! $TODAY</b>
 
@@ -83,6 +97,10 @@ REPORT=$(claude --print --dangerously-skip-permissions \
 • Название задачи
 (максимум 7 штук, остальные: «...и ещё N задач»)
 
+📧 <b>Почта:</b>
+• Краткое описание важного письма (от кого)
+(максимум 5 штук, пропусти блок если нет важных писем или Gmail не подключён)
+
 🎯 <b>ONE Big Thing:</b>
 Текст цели из goals/3-weekly.md
 
@@ -97,7 +115,7 @@ REPORT=$(claude --print --dangerously-skip-permissions \
 - --- разделители
 - Любой markdown
 ТОЛЬКО теги <b> <i> <code> и эмоджи.
-Максимум 2000 символов." \
+Максимум 2500 символов." \
     2>&1) || true
 cd "$PROJECT_DIR"
 

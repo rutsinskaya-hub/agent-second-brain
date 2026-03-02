@@ -17,6 +17,7 @@ class Intent(Enum):
     CREATE_TASK = "create_task"
     QUERY_TASKS = "query_tasks"    # Fast: read from Notion API directly
     NOTION_ACTION = "notion_action"  # Slow: update/write via Claude + MCP
+    CHECK_EMAIL = "check_email"    # Fetch & analyze Gmail
     SAVE = "save"
 
 
@@ -66,6 +67,15 @@ _ACTION_PATTERNS = [
     r"\bпоменяй\s+(дедлайн|срок)\b",
 ]
 
+_EMAIL_PATTERNS = [
+    r"\bпроверь\s+(почту|почта|mail|email|имейл|мейл)",
+    r"\b(что|чё|че)\s+(на\s+почте|в\s+почте|на\s+mail|в\s+mail)",
+    r"\bновые?\s+письм[аое]",
+    r"\bпочт[уа]\b",
+    r"\bemail\b",
+    r"\bписьм[аое]\b",
+]
+
 
 def classify(text: str) -> Intent:
     """Classify text intent. Returns Intent enum value."""
@@ -79,6 +89,9 @@ def classify(text: str) -> Intent:
     for pattern in _ACTION_PATTERNS:
         if re.search(pattern, t):
             return Intent.NOTION_ACTION
+    for pattern in _EMAIL_PATTERNS:
+        if re.search(pattern, t):
+            return Intent.CHECK_EMAIL
     return Intent.SAVE
 
 

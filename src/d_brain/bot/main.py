@@ -25,7 +25,7 @@ def create_bot(settings: Settings) -> Bot:
 
 def create_dispatcher() -> Dispatcher:
     """Create and configure the dispatcher with routers."""
-    from d_brain.bot.handlers import buttons, commands, do, forward, photo, process, task, text, voice, weekly
+    from d_brain.bot.handlers import buttons, commands, do, email, forward, photo, process, task, text, voice, weekly
 
     # Use memory storage for FSM (required for /do and /task command states)
     dp = Dispatcher(storage=MemoryStorage())
@@ -35,6 +35,7 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(process.router)
     dp.include_router(weekly.router)
     dp.include_router(task.router)   # Before do/text to catch TaskCommandState
+    dp.include_router(email.router)  # /email command
     dp.include_router(do.router)     # Before voice/text to catch DoCommandState
     dp.include_router(buttons.router)  # Reply keyboard buttons
     dp.include_router(voice.router)
@@ -97,6 +98,7 @@ async def run_bot(settings: Settings) -> None:
         BotCommand(command="task",    description="Быстро добавить задачу в Notion"),
         BotCommand(command="status",  description="Статус записей за сегодня"),
         BotCommand(command="process", description="Обработать записи за день"),
+        BotCommand(command="email",   description="Проверить почту"),
         BotCommand(command="do",      description="Произвольный запрос к Claude"),
         BotCommand(command="weekly",  description="Недельный дайджест"),
         BotCommand(command="help",    description="Справка"),

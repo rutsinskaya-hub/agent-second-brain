@@ -30,6 +30,19 @@ class Settings(BaseSettings):
         default=False,
         description="Whether to allow access to all users (security risk!)",
     )
+    gmail_credentials_path: str = Field(
+        default="gcp-oauth.keys.json",
+        description="Path to GCP OAuth credentials file",
+    )
+    gmail_token_path: str = Field(
+        default="gmail-token.json",
+        description="Path to Gmail OAuth token file",
+    )
+
+    @property
+    def gmail_enabled(self) -> bool:
+        """Check if Gmail token file exists."""
+        return Path(self.gmail_token_path).exists()
 
     @property
     def daily_path(self) -> Path:

@@ -10,10 +10,12 @@ requires-python = ">=3.12"
 dependencies = [
     "aiogram>=3.0",
     "deepgram-sdk",
+    "google-api-python-client",
+    "google-auth-httplib2",
+    "google-auth-oauthlib",
     "httpx",
     "pydantic>=2.0",
     "pydantic-settings",
-    "todoist-api-python>=3.1.0",
 ]
 
 [project.optional-dependencies]

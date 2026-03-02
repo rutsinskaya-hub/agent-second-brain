@@ -34,6 +34,14 @@ async def btn_weekly(message: Message, settings: Settings) -> None:
     await cmd_weekly(message, settings)
 
 
+@router.message(F.text == "📧 Почта")
+async def btn_email(message: Message, settings: Settings) -> None:
+    """Handle Email button."""
+    from d_brain.bot.handlers.email import cmd_email
+
+    await cmd_email(message, settings)
+
+
 @router.message(F.text == "✨ Запрос")
 async def btn_do(message: Message, state: FSMContext) -> None:
     """Handle Do button - set state and wait for input."""

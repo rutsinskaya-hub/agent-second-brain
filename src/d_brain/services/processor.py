@@ -208,6 +208,65 @@ EXECUTION:
 
         return self._run_claude(prompt)
 
+    def analyze_emails(self, email_data: str) -> dict[str, Any]:
+        """Analyze emails with Claude: extract tasks, create in Notion, return report."""
+        today = date.today()
+
+        prompt = f"""Ты — персональный ассистент d-brain. Проанализируй входящую почту.
+
+CONTEXT:
+- Текущая дата: {today}
+
+{email_data}
+
+MCP TOOLS:
+- Для создания задач: mcp__notion__API-post-page
+- database_id задач: "305289eb-342c-80ec-856d-f1c014cdff68"
+- НЕ упоминай Todoist
+
+МАППИНГ ПРОЕКТОВ (используй relation при создании задач):
+- Контент-завод тексты: 305289eb-342c-8006-b59e-f5cc3156c7d8
+- Организации и ассоциации: 305289eb-342c-801d-aa76-fb2c76b439ff
+- Hubspot+Skillbox: 305289eb-342c-8022-9f4d-c627b3852e00
+- Контент-завод видео: 305289eb-342c-8027-8f66-dcd90a486ea6
+- Социальные сети: 305289eb-342c-802a-8e6e-fb2a4ec5d153
+- Стратегия: 305289eb-342c-8046-a5f5-da9d87ea9012
+- Маркетинговые материалы: 305289eb-342c-807c-91d4-d1c63b5b6a9a
+- Zapusk International: 305289eb-342c-8085-920e-f362f112a740
+- Мероприятия: 305289eb-342c-8096-ae8f-cbac8371998d
+- Встречи и совещания: 305289eb-342c-8098-80f9-c8bab1a00270
+- Лидогенерация: 305289eb-342c-80ce-babb-c87b1f0da95d
+- СМИ: 305289eb-342c-80ed-b643-fb4d6dd71d82
+- Запуск Энергосбыт: 305289eb-342c-80f1-b140-c755496996ce
+
+ИНСТРУКЦИЯ:
+1. Прочитай каждое письмо
+2. ИГНОРИРУЙ: рассылки, уведомления сервисов (Jira, GitHub, Slack, HubSpot notifications), спам, маркетинговые рассылки
+3. Из ВАЖНЫХ писем (от людей, с конкретными запросами/задачами) — создай задачи в Notion через mcp__notion__API-post-page
+4. Для каждой задачи задай: Name (title), Status="Not started", Срок выполнения (если упомянут), Проект (relation, если определяется)
+5. Верни HTML-отчёт
+
+CRITICAL OUTPUT FORMAT:
+- Return ONLY raw HTML for Telegram (parse_mode=HTML)
+- NO markdown
+- Формат:
+📧 <b>Анализ почты</b>
+
+📬 Писем: N (из них важных: M)
+
+✅ <b>Созданные задачи:</b>
+• Название задачи (от кого)
+• Название задачи (от кого)
+
+📋 <b>К сведению:</b>
+• Краткое содержание важного письма
+(только если не создана задача)
+
+- Allowed tags: <b>, <i>, <code>
+- Be concise - Telegram has 4096 char limit"""
+
+        return self._run_claude(prompt)
+
     def generate_weekly(self) -> dict[str, Any]:
         """Generate weekly digest with Claude."""
         today = date.today()

@@ -70,6 +70,12 @@ async def handle_text(message: Message, settings: Settings) -> None:
         storage.append_to_daily(text, timestamp, "[text][query]")
         session.append(user_id, "text", text=text, msg_id=message.message_id)
 
+    elif intent == Intent.CHECK_EMAIL:
+        from d_brain.bot.handlers.email import check_email_intent
+        await check_email_intent(message, settings)
+        storage.append_to_daily(text, timestamp, "[text][email]")
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
+
     elif intent == Intent.NOTION_ACTION:
         status_msg = await message.answer("⏳ Выполняю...")
         processor = ClaudeProcessor(settings.vault_path, settings.notion_token)

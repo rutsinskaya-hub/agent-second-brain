@@ -1,6 +1,7 @@
 # Environment files (ВАЖНО: секреты!)
 .env
 gcp-oauth.keys.json
+gmail-token.json
 .env.local
 .env.*.local
 
