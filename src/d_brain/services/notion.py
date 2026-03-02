@@ -12,6 +12,24 @@ logger = logging.getLogger(__name__)
 NOTION_API_URL = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
 TASKS_DB_ID = "305289eb-342c-80ec-856d-f1c014cdff68"
+PROJECTS_DB_ID = "305289eb-342c-808b-a075-fce6a56e22ce"
+
+# Project name → Notion page ID (from "Проекты" database)
+PROJECT_IDS: dict[str, str] = {
+    "Контент-завод тексты": "305289eb-342c-8006-b59e-f5cc3156c7d8",
+    "Организации и ассоциации": "305289eb-342c-801d-aa76-fb2c76b439ff",
+    "Hubspot+Skillbox": "305289eb-342c-8022-9f4d-c627b3852e00",
+    "Контент-завод видео": "305289eb-342c-8027-8f66-dcd90a486ea6",
+    "Социальные сети": "305289eb-342c-802a-8e6e-fb2a4ec5d153",
+    "Стратегия": "305289eb-342c-8046-a5f5-da9d87ea9012",
+    "Маркетинговые материалы": "305289eb-342c-807c-91d4-d1c63b5b6a9a",
+    "Zapusk International": "305289eb-342c-8085-920e-f362f112a740",
+    "Мероприятия": "305289eb-342c-8096-ae8f-cbac8371998d",
+    "Встречи и совещания": "305289eb-342c-8098-80f9-c8bab1a00270",
+    "Лидогенерация": "305289eb-342c-80ce-babb-c87b1f0da95d",
+    "СМИ": "305289eb-342c-80ed-b643-fb4d6dd71d82",
+    "Запуск Энергосбыт": "305289eb-342c-80f1-b140-c755496996ce",
+}
 
 
 class NotionClient:
@@ -40,8 +58,8 @@ class NotionClient:
         }
         if due_date:
             properties["Срок выполнения"] = {"date": {"start": due_date}}
-        if project:
-            properties["Тег проекта"] = {"multi_select": [{"name": project}]}
+        if project and project in PROJECT_IDS:
+            properties["Проект"] = {"relation": [{"id": PROJECT_IDS[project]}]}
 
         payload = {
             "parent": {"database_id": TASKS_DB_ID},
@@ -71,7 +89,7 @@ class NotionClient:
         """Query tasks from the database.
 
         query_type: "overdue" | "today" | "tomorrow" | "in_progress" | "all"
-        project: optional project name to filter by "Тег проекта"
+        project: optional project name to filter by "Проект" relation
         Returns list of simplified task dicts: {name, status, due_date}
         """
         from datetime import timedelta
@@ -95,8 +113,9 @@ class NotionClient:
         else:  # all — exclude Done
             filters = {"property": "Status", "status": {"does_not_equal": "Done"}}
 
-        if project:
-            project_filter = {"property": "Тег проекта", "multi_select": {"contains": project}}
+        if project and project in PROJECT_IDS:
+            project_page_id = PROJECT_IDS[project]
+            project_filter = {"property": "Проект", "relation": {"contains": project_page_id}}
             if filters:
                 filters = {"and": [filters, project_filter]}
             else:
