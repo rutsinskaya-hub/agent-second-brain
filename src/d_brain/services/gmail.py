@@ -195,19 +195,30 @@ class GmailClient:
         return "\n".join(lines)
 
     @staticmethod
-    def setup_oauth(credentials_path: str, token_path: str) -> None:
+    def setup_oauth(token_path: str, quota_project: str = "d-brain-489019") -> None:
         """Run interactive OAuth flow (needs browser). One-time setup."""
-        flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
+        import json
+
+        # Use Google's public OAuth client for installed apps
+        client_config = {
+            "installed": {
+                "client_id": "764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com",
+                "client_secret": "d-FL95Q19q7MQmFpd7hHD0Ty",
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": ["http://localhost"],
+            }
+        }
+        flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
         creds = flow.run_local_server(port=0)
-        Path(token_path).write_text(creds.to_json())
+        token_data = json.loads(creds.to_json())
+        token_data["quota_project_id"] = quota_project
+        Path(token_path).write_text(json.dumps(token_data, indent=2))
         print(f"✅ Gmail token saved to {token_path}")
-        print(f"   Copy to VPS: scp {token_path} root@<VPS>:/path/to/project/")
 
 
 if __name__ == "__main__":
     if "--setup" in sys.argv:
-        creds_path = sys.argv[sys.argv.index("--setup") + 1] if len(sys.argv) > sys.argv.index("--setup") + 1 else "gcp-oauth.keys.json"
-        token_out = "gmail-token.json"
-        GmailClient.setup_oauth(creds_path, token_out)
+        GmailClient.setup_oauth("gmail-token.json")
     else:
-        print("Usage: python -m d_brain.services.gmail --setup [credentials.json]")
+        print("Usage: python -m d_brain.services.gmail --setup")
