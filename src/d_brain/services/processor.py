@@ -338,6 +338,35 @@ EVENT_LOCATION: место (или пусто)
 
         return self._run_claude(prompt)
 
+    def parse_reminder(self, user_request: str) -> dict[str, Any]:
+        """Ask Claude to extract reminder time and text from natural language."""
+        from datetime import datetime
+
+        today = date.today()
+        now = datetime.now().strftime("%H:%M")
+
+        prompt = f"""Извлеки данные напоминания из запроса пользователя.
+
+Текущая дата: {today}, время: {now} (Europe/Moscow)
+
+ЗАПРОС: {user_request}
+
+Верни ТОЛЬКО строки в формате ключ:значение, без лишнего текста:
+REMINDER_TEXT: о чем напомнить (без слов "напомни мне")
+REMINDER_DATE: YYYY-MM-DD
+REMINDER_TIME: HH:MM
+
+Правила:
+- "через 30 минут" — прибавь к текущему времени
+- "через час" — +1 час
+- "в 3" / "в 15" — определи по контексту (если сейчас утро, "в 3" = 15:00)
+- "завтра в 10" — дата завтра, время 10:00
+- "завтра утром" — завтра 09:00
+- "вечером" — 19:00
+- Если время не указано явно, поставь +1 час от текущего"""
+
+        return self._run_claude(prompt)
+
     def generate_weekly(self) -> dict[str, Any]:
         """Generate weekly digest with Claude."""
         today = date.today()

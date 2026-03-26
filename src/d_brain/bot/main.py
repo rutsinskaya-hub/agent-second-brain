@@ -25,7 +25,7 @@ def create_bot(settings: Settings) -> Bot:
 
 def create_dispatcher() -> Dispatcher:
     """Create and configure the dispatcher with routers."""
-    from d_brain.bot.handlers import buttons, calendar, commands, do, email, forward, photo, process, task, text, voice, weekly
+    from d_brain.bot.handlers import buttons, calendar, commands, do, email, forward, photo, process, reminder, task, text, voice, weekly
 
     # Use memory storage for FSM (required for /do and /task command states)
     dp = Dispatcher(storage=MemoryStorage())
@@ -37,6 +37,7 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(task.router)   # Before do/text to catch TaskCommandState
     dp.include_router(email.router)  # /email command
     dp.include_router(calendar.router)  # /calendar command
+    dp.include_router(reminder.router)  # /reminders command
     dp.include_router(do.router)     # Before voice/text to catch DoCommandState
     dp.include_router(buttons.router)  # Reply keyboard buttons
     dp.include_router(voice.router)
@@ -85,6 +86,11 @@ def create_auth_middleware(settings: Settings) -> MiddlewareType:
 
 async def run_bot(settings: Settings) -> None:
     """Run the bot with polling."""
+    from pathlib import Path
+
+    from d_brain.bot.handlers import reminder as reminder_handler
+    from d_brain.services.reminders import ReminderScheduler
+
     bot = create_bot(settings)
     dp = create_dispatcher()
 
@@ -94,16 +100,29 @@ async def run_bot(settings: Settings) -> None:
     # Always add auth middleware for security (it handles allow_all_users internally)
     dp.update.middleware(create_auth_middleware(settings))
 
+    # Initialize reminder scheduler
+    reminders_path = Path(settings.vault_path) / "reminders.json"
+    sched = ReminderScheduler(reminders_path)
+
+    async def send_reminder(chat_id: int, text: str) -> None:
+        await bot.send_message(chat_id, f"⏰ <b>Напоминание</b>\n\n{text}")
+
+    sched.set_callback(send_reminder)
+    count = sched.start_all()
+    reminder_handler.scheduler = sched
+    logger.info("Reminder scheduler started with %d active reminders", count)
+
     # Register bot command menu visible in Telegram UI
     await bot.set_my_commands([
-        BotCommand(command="task",    description="Быстро добавить задачу в Notion"),
-        BotCommand(command="status",  description="Статус записей за сегодня"),
-        BotCommand(command="process", description="Обработать записи за день"),
-        BotCommand(command="email",    description="Проверить почту"),
-        BotCommand(command="calendar", description="Расписание на сегодня"),
-        BotCommand(command="do",      description="Произвольный запрос к Claude"),
-        BotCommand(command="weekly",  description="Недельный дайджест"),
-        BotCommand(command="help",    description="Справка"),
+        BotCommand(command="task",      description="Быстро добавить задачу в Notion"),
+        BotCommand(command="status",    description="Статус записей за сегодня"),
+        BotCommand(command="process",   description="Обработать записи за день"),
+        BotCommand(command="email",     description="Проверить почту"),
+        BotCommand(command="calendar",  description="Расписание на сегодня"),
+        BotCommand(command="reminders", description="Активные напоминания"),
+        BotCommand(command="do",        description="Произвольный запрос к Claude"),
+        BotCommand(command="weekly",    description="Недельный дайджест"),
+        BotCommand(command="help",      description="Справка"),
     ])
     logger.info("Bot commands registered")
 

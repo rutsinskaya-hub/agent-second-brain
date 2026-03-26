@@ -56,7 +56,13 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
         # ── Intent routing ────────────────────────────────────────────────
         intent = classify(transcript) if settings.notion_token else Intent.SAVE
 
-        if intent == Intent.CREATE_TASK:
+        if intent == Intent.SET_REMINDER:
+            from d_brain.bot.handlers.reminder import set_reminder_intent
+            await set_reminder_intent(message, settings, transcript)
+            storage.append_to_daily(transcript, timestamp, "[voice][reminder]")
+            session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
+
+        elif intent == Intent.CREATE_TASK:
             await _handle_create_task(message, transcript, timestamp, storage, session, user_id, settings)
 
         elif intent == Intent.QUERY_TASKS:

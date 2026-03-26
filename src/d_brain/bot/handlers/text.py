@@ -33,7 +33,13 @@ async def handle_text(message: Message, settings: Settings) -> None:
     # ── Intent routing ────────────────────────────────────────────────────
     intent = classify(text) if settings.notion_token else Intent.SAVE
 
-    if intent == Intent.CREATE_TASK:
+    if intent == Intent.SET_REMINDER:
+        from d_brain.bot.handlers.reminder import set_reminder_intent
+        await set_reminder_intent(message, settings, text)
+        storage.append_to_daily(text, timestamp, "[text][reminder]")
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
+
+    elif intent == Intent.CREATE_TASK:
         task_name = extract_task_name(text)
         project, task_name = extract_project(task_name)
         due_date = extract_due_date(text)

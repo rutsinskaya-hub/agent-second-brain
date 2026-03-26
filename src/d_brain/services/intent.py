@@ -21,6 +21,7 @@ class Intent(Enum):
     MANAGE_EMAIL = "manage_email"  # Delete/trash emails
     CHECK_CALENDAR = "check_calendar"  # Show upcoming events
     CREATE_EVENT = "create_event"      # Add event to Google Calendar
+    SET_REMINDER = "set_reminder"      # Set a timed reminder
     SAVE = "save"
 
 
@@ -77,6 +78,16 @@ _MANAGE_EMAIL_PATTERNS = [
     r"\b(отпиши|отписать|отписаться)\s+от\b",
 ]
 
+_REMINDER_PATTERNS = [
+    r"\bнапомни\w*\s+(мне\s+)?(в\s+\d|через\s+(\d|час|пол)|завтра|сегодня|вечером|утром)",
+    r"\bнапомни\w*\s+(мне\s+)?о\b",
+    r"\b(напоминани[ея]|напоминалк[уа])\s+(на|в|через)\b",
+    r"\b(поставь|установи|сделай)\s+напоминани",
+    r"\bчерез\s+(\d+|час|пол\w*)\s+(минут|час|мин)\w*\s+напомни",
+    r"\bнапомни\w*\s+(мне\s+)?через\s+",
+    r"\bremind\w*\b",
+]
+
 _CREATE_EVENT_PATTERNS = [
     r"\b(добав|созда|запиш|запис|постав|назначь|поставь|запланируй)\w*\s+.{0,20}(встреч|совещани|созвон|событи|мероприяти|мит(?:инг)?|звонок|колл)",
     r"\b(встреч[уа]|совещани[ея]|созвон|событи[ея]|мероприяти[ея]|мит(?:инг)?|звонок|колл)\s+.{0,30}(добав|созда|запиш|запис|назначь|запланируй)",
@@ -108,6 +119,9 @@ _EMAIL_PATTERNS = [
 def classify(text: str) -> Intent:
     """Classify text intent. Returns Intent enum value."""
     t = text.lower()
+    for pattern in _REMINDER_PATTERNS:
+        if re.search(pattern, t):
+            return Intent.SET_REMINDER
     for pattern in _CREATE_PATTERNS:
         if re.search(pattern, t):
             return Intent.CREATE_TASK
