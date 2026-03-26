@@ -267,6 +267,50 @@ CRITICAL OUTPUT FORMAT:
 
         return self._run_claude(prompt)
 
+    def manage_emails(self, user_request: str, email_data: str) -> dict[str, Any]:
+        """Ask Claude which emails to trash based on user request.
+
+        Claude returns HTML report with TRASH_IDS line for parsing.
+        """
+        today = date.today()
+
+        prompt = f"""Ты — персональный ассистент d-brain. Пользователь хочет управлять почтой.
+
+CONTEXT:
+- Текущая дата: {today}
+
+{email_data}
+
+ЗАПРОС ПОЛЬЗОВАТЕЛЯ:
+{user_request}
+
+ИНСТРУКЦИЯ:
+1. Проанализируй запрос пользователя
+2. Определи какие письма из списка нужно удалить (переместить в корзину)
+3. Верни HTML-отчёт И список ID писем для удаления
+
+CRITICAL OUTPUT FORMAT:
+- Return ONLY raw HTML for Telegram (parse_mode=HTML)
+- NO markdown
+- Формат:
+🗑 <b>Управление почтой</b>
+
+✅ <b>В корзину:</b>
+• Тема письма (от кого)
+• Тема письма (от кого)
+
+⏭ <b>Оставлено:</b>
+• Тема письма (от кого) — причина
+
+TRASH_IDS:id1,id2,id3
+
+- ОБЯЗАТЕЛЬНО в последней строке: TRASH_IDS: через запятую ID писем для удаления
+- Если удалять нечего: TRASH_IDS:none
+- Allowed tags: <b>, <i>, <code>
+- Be concise - Telegram has 4096 char limit"""
+
+        return self._run_claude(prompt)
+
     def generate_weekly(self) -> dict[str, Any]:
         """Generate weekly digest with Claude."""
         today = date.today()

@@ -62,6 +62,12 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
         elif intent == Intent.QUERY_TASKS:
             await _handle_query_tasks(message, transcript, timestamp, storage, session, user_id, settings)
 
+        elif intent == Intent.MANAGE_EMAIL:
+            from d_brain.bot.handlers.email import manage_email_intent
+            await manage_email_intent(message, settings, transcript)
+            storage.append_to_daily(transcript, timestamp, "[voice][email-manage]")
+            session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
+
         elif intent == Intent.CHECK_EMAIL:
             from d_brain.bot.handlers.email import check_email_intent
             await check_email_intent(message, settings)

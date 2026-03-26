@@ -18,6 +18,7 @@ class Intent(Enum):
     QUERY_TASKS = "query_tasks"    # Fast: read from Notion API directly
     NOTION_ACTION = "notion_action"  # Slow: update/write via Claude + MCP
     CHECK_EMAIL = "check_email"    # Fetch & analyze Gmail
+    MANAGE_EMAIL = "manage_email"  # Delete/trash emails
     SAVE = "save"
 
 
@@ -67,6 +68,13 @@ _ACTION_PATTERNS = [
     r"\bпоменяй\s+(дедлайн|срок)\b",
 ]
 
+_MANAGE_EMAIL_PATTERNS = [
+    r"\b(удали|удалить|убери|убрать|очисти|очистить|сотри|стереть|выброси|выбросить)\s+.{0,40}(письм|почт|mail|email|рассылк)",
+    r"\b(письм|почт|рассылк)\w*\s+.{0,30}(удали|убери|очисти|сотри|выброси)",
+    r"\b(удали|убери|очисти)\s+(все|всё)\s+(от|из)\b",
+    r"\b(отпиши|отписать|отписаться)\s+от\b",
+]
+
 _EMAIL_PATTERNS = [
     r"\bпроверь\s+(почту|почта|mail|email|имейл|мейл)",
     r"\b(что|чё|че)\s+(на\s+почте|в\s+почте|на\s+mail|в\s+mail)",
@@ -89,6 +97,9 @@ def classify(text: str) -> Intent:
     for pattern in _ACTION_PATTERNS:
         if re.search(pattern, t):
             return Intent.NOTION_ACTION
+    for pattern in _MANAGE_EMAIL_PATTERNS:
+        if re.search(pattern, t):
+            return Intent.MANAGE_EMAIL
     for pattern in _EMAIL_PATTERNS:
         if re.search(pattern, t):
             return Intent.CHECK_EMAIL

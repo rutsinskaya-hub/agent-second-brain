@@ -30,7 +30,7 @@ from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
 
 
 class GmailClient:
@@ -166,6 +166,27 @@ class GmailClient:
 
         return ""
 
+    def trash_message(self, message_id: str) -> bool:
+        """Move a message to Trash. Returns True on success."""
+        service = self._get_service()
+        try:
+            service.users().messages().trash(userId="me", id=message_id).execute()
+            logger.info("Trashed message %s", message_id)
+            return True
+        except Exception:
+            logger.exception("Failed to trash message %s", message_id)
+            return False
+
+    def trash_messages(self, message_ids: list[str]) -> dict[str, int]:
+        """Trash multiple messages. Returns counts of success/fail."""
+        ok = fail = 0
+        for mid in message_ids:
+            if self.trash_message(mid):
+                ok += 1
+            else:
+                fail += 1
+        return {"trashed": ok, "failed": fail}
+
     def format_for_claude(self, emails: list[dict[str, Any]]) -> str:
         """Format emails as structured text for Claude prompt injection."""
         if not emails:
@@ -199,21 +220,29 @@ class GmailClient:
         return "\n".join(lines)
 
     @staticmethod
-    def setup_oauth(token_path: str, quota_project: str = "d-brain-489019") -> None:
+    def setup_oauth(
+        token_path: str,
+        credentials_path: str = "gcp-oauth.keys.json",
+        quota_project: str = "d-brain-489019",
+    ) -> None:
         """Run interactive OAuth flow (needs browser). One-time setup."""
         import json
 
-        # Use Google's public OAuth client for installed apps
-        client_config = {
-            "installed": {
-                "client_id": "764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com",
-                "client_secret": "d-FL95Q19q7MQmFpd7hHD0Ty",
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "redirect_uris": ["http://localhost"],
+        creds_file = Path(credentials_path)
+        if creds_file.exists():
+            flow = InstalledAppFlow.from_client_secrets_file(str(creds_file), SCOPES)
+        else:
+            # Fallback to Google's public OAuth client (readonly only)
+            client_config = {
+                "installed": {
+                    "client_id": "764086051850-6qr4p6gpi6hn506pt8ejuq83di341hur.apps.googleusercontent.com",
+                    "client_secret": "d-FL95Q19q7MQmFpd7hHD0Ty",
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": ["http://localhost"],
+                }
             }
-        }
-        flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+            flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
         creds = flow.run_local_server(port=0)
         token_data = json.loads(creds.to_json())
         token_data["quota_project_id"] = quota_project
