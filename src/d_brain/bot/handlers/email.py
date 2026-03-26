@@ -125,7 +125,7 @@ async def manage_email_intent(message: Message, settings: Settings, user_text: s
 
         if safe_ids:
             counts = client.delete_messages(safe_ids)
-            clean_report += f"\n\n🗑 Удалено навсегда: {counts['deleted']}"
+            clean_report += f"\n\n🗑 В корзину: {counts['deleted']}"
             if counts["failed"]:
                 clean_report += f" (ошибок: {counts['failed']})"
         else:
