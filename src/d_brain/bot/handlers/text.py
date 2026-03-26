@@ -70,6 +70,12 @@ async def handle_text(message: Message, settings: Settings) -> None:
         storage.append_to_daily(text, timestamp, "[text][query]")
         session.append(user_id, "text", text=text, msg_id=message.message_id)
 
+    elif intent == Intent.CREATE_EVENT:
+        from d_brain.bot.handlers.calendar import create_event_intent
+        await create_event_intent(message, settings, text)
+        storage.append_to_daily(text, timestamp, "[text][calendar-create]")
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
+
     elif intent == Intent.CHECK_CALENDAR:
         from d_brain.bot.handlers.calendar import check_calendar_intent
         await check_calendar_intent(message, settings, text)

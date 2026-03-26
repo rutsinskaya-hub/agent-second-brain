@@ -62,6 +62,12 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
         elif intent == Intent.QUERY_TASKS:
             await _handle_query_tasks(message, transcript, timestamp, storage, session, user_id, settings)
 
+        elif intent == Intent.CREATE_EVENT:
+            from d_brain.bot.handlers.calendar import create_event_intent
+            await create_event_intent(message, settings, transcript)
+            storage.append_to_daily(transcript, timestamp, "[voice][calendar-create]")
+            session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
+
         elif intent == Intent.CHECK_CALENDAR:
             from d_brain.bot.handlers.calendar import check_calendar_intent
             await check_calendar_intent(message, settings, transcript)

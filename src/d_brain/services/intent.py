@@ -20,6 +20,7 @@ class Intent(Enum):
     CHECK_EMAIL = "check_email"    # Fetch & analyze Gmail
     MANAGE_EMAIL = "manage_email"  # Delete/trash emails
     CHECK_CALENDAR = "check_calendar"  # Show upcoming events
+    CREATE_EVENT = "create_event"      # Add event to Google Calendar
     SAVE = "save"
 
 
@@ -76,6 +77,13 @@ _MANAGE_EMAIL_PATTERNS = [
     r"\b(отпиши|отписать|отписаться)\s+от\b",
 ]
 
+_CREATE_EVENT_PATTERNS = [
+    r"\b(добав|созда|запиш|запис|постав|назначь|поставь|запланируй)\w*\s+.{0,20}(встреч|совещани|созвон|событи|мероприяти|мит(?:инг)?|звонок|колл)",
+    r"\b(встреч[уа]|совещани[ея]|созвон|событи[ея]|мероприяти[ея]|мит(?:инг)?|звонок|колл)\s+.{0,30}(добав|созда|запиш|запис|назначь|запланируй)",
+    r"\b(добав|созда|запланируй)\w*\s+в\s+календарь\b",
+    r"\bв\s+календарь\s+(добав|созда|запиш|запланируй)",
+]
+
 _CALENDAR_PATTERNS = [
     r"\b(календарь|расписание|расписани[еяю])\b",
     r"\bчто\s+(у меня\s+)?(сегодня|завтра|на\s+неделе?)\s*(по\s+)?встреч",
@@ -112,6 +120,9 @@ def classify(text: str) -> Intent:
     for pattern in _MANAGE_EMAIL_PATTERNS:
         if re.search(pattern, t):
             return Intent.MANAGE_EMAIL
+    for pattern in _CREATE_EVENT_PATTERNS:
+        if re.search(pattern, t):
+            return Intent.CREATE_EVENT
     for pattern in _CALENDAR_PATTERNS:
         if re.search(pattern, t):
             return Intent.CHECK_CALENDAR

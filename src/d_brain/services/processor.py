@@ -3,7 +3,7 @@
 import logging
 import os
 import subprocess
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -308,6 +308,33 @@ TRASH_IDS:id1,id2,id3
 - Если удалять нечего: TRASH_IDS:none
 - Allowed tags: <b>, <i>, <code>
 - Be concise - Telegram has 4096 char limit"""
+
+        return self._run_claude(prompt)
+
+    def parse_calendar_event(self, user_request: str) -> dict[str, Any]:
+        """Ask Claude to extract event details from natural language."""
+        today = date.today()
+
+        prompt = f"""Извлеки данные события из запроса пользователя.
+
+Текущая дата: {today} ({today.strftime('%A')})
+Часовой пояс: Europe/Moscow
+
+ЗАПРОС: {user_request}
+
+Верни ТОЛЬКО строки в формате ключ:значение, без лишнего текста:
+EVENT_SUMMARY: название события
+EVENT_DATE: YYYY-MM-DD
+EVENT_START: HH:MM (или ALL_DAY)
+EVENT_END: HH:MM (или пусто если не указано — я добавлю +1 час)
+EVENT_LOCATION: место (или пусто)
+
+Правила:
+- "завтра" = {today + timedelta(days=1)}
+- "в 3" / "в 15" — определи по контексту (деловые встречи обычно днем)
+- "на час" / "на 30 минут" — рассчитай EVENT_END
+- "весь день" — EVENT_START: ALL_DAY
+- Название: убери слова-триггеры (добавь, запланируй), оставь суть"""
 
         return self._run_claude(prompt)
 

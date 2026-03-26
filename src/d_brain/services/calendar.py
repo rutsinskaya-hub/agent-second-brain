@@ -27,7 +27,7 @@ from googleapiclient.discovery import build
 
 logger = logging.getLogger(__name__)
 
-SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
 
 class CalendarClient:
@@ -184,6 +184,47 @@ class CalendarClient:
             "calendar": "",
             "hangout_link": ev.get("hangoutLink", ""),
         }
+
+    def create_event(
+        self,
+        summary: str,
+        start: datetime,
+        end: datetime | None = None,
+        location: str = "",
+        description: str = "",
+        all_day: bool = False,
+    ) -> dict[str, Any]:
+        """Create a calendar event. Returns the created event dict."""
+        service = self._get_service()
+
+        if end is None:
+            end = start + timedelta(hours=1)
+
+        if all_day:
+            body: dict[str, Any] = {
+                "summary": summary,
+                "start": {"date": start.strftime("%Y-%m-%d")},
+                "end": {"date": end.strftime("%Y-%m-%d")},
+            }
+        else:
+            body = {
+                "summary": summary,
+                "start": {"dateTime": start.isoformat(), "timeZone": "Europe/Moscow"},
+                "end": {"dateTime": end.isoformat(), "timeZone": "Europe/Moscow"},
+            }
+
+        if location:
+            body["location"] = location
+        if description:
+            body["description"] = description
+
+        try:
+            event = service.events().insert(calendarId="primary", body=body).execute()
+            logger.info("Created event: %s at %s", summary, start)
+            return {"id": event.get("id", ""), "link": event.get("htmlLink", "")}
+        except Exception:
+            logger.exception("Failed to create event")
+            raise
 
     def format_events_html(self, events: list[dict[str, Any]], title: str = "Календарь") -> str:
         """Format events as Telegram HTML."""
