@@ -124,8 +124,8 @@ async def manage_email_intent(message: Message, settings: Settings, user_text: s
         safe_ids = [mid for mid in trash_ids if mid in valid_ids]
 
         if safe_ids:
-            counts = client.trash_messages(safe_ids)
-            clean_report += f"\n\n🗑 Удалено: {counts['trashed']}"
+            counts = client.delete_messages(safe_ids)
+            clean_report += f"\n\n🗑 Удалено навсегда: {counts['deleted']}"
             if counts["failed"]:
                 clean_report += f" (ошибок: {counts['failed']})"
         else:
@@ -136,4 +136,4 @@ async def manage_email_intent(message: Message, settings: Settings, user_text: s
     except Exception:
         await status_msg.edit_text(clean_report, parse_mode=None)
 
-    logger.info("Email management: %d trashed", len(trash_ids))
+    logger.info("Email management: %d deleted", len(trash_ids))

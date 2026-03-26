@@ -166,26 +166,32 @@ class GmailClient:
 
         return ""
 
-    def trash_message(self, message_id: str) -> bool:
-        """Move a message to Trash. Returns True on success."""
+    def delete_message(self, message_id: str) -> bool:
+        """Remove message from inbox (trash + remove INBOX label). Returns True on success."""
         service = self._get_service()
         try:
+            # Trash first
             service.users().messages().trash(userId="me", id=message_id).execute()
-            logger.info("Trashed message %s", message_id)
+            # Then also remove INBOX label to ensure it disappears
+            service.users().messages().modify(
+                userId="me", id=message_id,
+                body={"removeLabelIds": ["INBOX", "UNREAD"]},
+            ).execute()
+            logger.info("Deleted message %s", message_id)
             return True
         except Exception:
-            logger.exception("Failed to trash message %s", message_id)
+            logger.exception("Failed to delete message %s", message_id)
             return False
 
-    def trash_messages(self, message_ids: list[str]) -> dict[str, int]:
-        """Trash multiple messages. Returns counts of success/fail."""
+    def delete_messages(self, message_ids: list[str]) -> dict[str, int]:
+        """Delete multiple messages. Returns counts."""
         ok = fail = 0
         for mid in message_ids:
-            if self.trash_message(mid):
+            if self.delete_message(mid):
                 ok += 1
             else:
                 fail += 1
-        return {"trashed": ok, "failed": fail}
+        return {"deleted": ok, "failed": fail}
 
     def format_for_claude(self, emails: list[dict[str, Any]]) -> str:
         """Format emails as structured text for Claude prompt injection."""
