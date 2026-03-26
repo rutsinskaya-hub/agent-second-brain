@@ -304,7 +304,8 @@ CRITICAL OUTPUT FORMAT:
 
 TRASH_IDS:id1,id2,id3
 
-- ОБЯЗАТЕЛЬНО в последней строке: TRASH_IDS: через запятую ID писем для удаления
+- ОБЯЗАТЕЛЬНО в последней строке: TRASH_IDS: через запятую ТОЧНЫЕ ID из поля "ID:" каждого письма
+- Копируй ID дословно из данных выше, НЕ придумывай свои
 - Если удалять нечего: TRASH_IDS:none
 - Allowed tags: <b>, <i>, <code>
 - Be concise - Telegram has 4096 char limit"""

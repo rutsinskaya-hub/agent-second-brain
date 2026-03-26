@@ -202,6 +202,7 @@ class GmailClient:
         for i, e in enumerate(emails, 1):
             lines.append(
                 f"--- Письмо {i} ---\n"
+                f"ID: {e['id']}\n"
                 f"От: {e['from_name']} <{e['from_email']}>\n"
                 f"Тема: {e['subject']}\n"
                 f"Дата: {e['date']}\n"
