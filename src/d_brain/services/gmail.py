@@ -63,6 +63,10 @@ class GmailClient:
             self._token_path.write_text(creds.to_json())
             logger.info("Gmail token refreshed")
 
+        # Ensure quota project is set so Gmail API doesn't reject requests
+        if creds and not creds.quota_project_id:
+            creds = creds.with_quota_project("d-brain-489019")
+
         if not creds or not creds.valid:
             raise RuntimeError(
                 "Gmail token missing or invalid. "
