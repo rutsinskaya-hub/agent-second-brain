@@ -20,10 +20,8 @@ fi
 
 export MCP_TIMEOUT=30000
 export MAX_MCP_OUTPUT_TOKENS=50000
-export GOOGLE_OAUTH_CREDENTIALS="$PROJECT_DIR/gcp-oauth.keys.json"
 
 TODAY=$(date +%Y-%m-%d)
-TOMORROW=$(date -d tomorrow +%Y-%m-%d)
 CHAT_ID="${ALLOWED_USER_IDS//[\[\]]/}"
 
 # Trap script errors — send Telegram alert
@@ -41,34 +39,21 @@ trap '_send_error $LINENO $?' ERR
 
 echo "=== d-brain evening summary for $TODAY ==="
 
+# Fetch tasks, calendar, reminders data via Python
+EVENING_DATA=$(cd "$PROJECT_DIR" && /home/myuser/.local/bin/uv run python3 "$PROJECT_DIR/scripts/evening_data.py" 2>/dev/null || true)
+
 cd "$VAULT_DIR"
 REPORT=$(claude --print --dangerously-skip-permissions \
     --mcp-config "$PROJECT_DIR/mcp-config.json" \
     -p "Сегодня $TODAY. Сгенерируй вечерний итог дня.
 
-ПОРЯДОК ДЕЙСТВИЙ (выполняй строго по порядку):
+ВОТ ВСЕ ДАННЫЕ (НЕ вызывай MCP-инструменты, данные уже собраны):
 
-1. Получи задачи из Notion базы данных \"Задачи и поручения\".
-   Вызови mcp__notion__API-post-database-query с параметрами:
-   - database_id: \"305289eb-342c-80ec-856d-f1c014cdff68\"
-   - sorts: [{\"timestamp\": \"last_edited_time\", \"direction\": \"descending\"}]
-   - page_size: 30
-   Раздели задачи на:
-   a) Status = \"Done\" — сделано сегодня
-   b) Status = \"In progress\" — не завершено
-   c) Просроченные — дедлайн < $TODAY и Status != \"Done\"
+$EVENING_DATA
 
-2. Вызови mcp__google-calendar__list-events для завтра:
-   - timeMin: \"${TOMORROW}T00:00:00Z\"
-   - timeMax: \"${TOMORROW}T23:59:59Z\"
-
-3. Верни ТОЧНО в таком формате — ничего лишнего, только этот блок:
+Верни ТОЧНО в таком формате — ничего лишнего, только этот блок:
 
 🌙 <b>Итог дня: $TODAY</b>
-
-✅ <b>Сделано сегодня:</b>
-• Название задачи
-(или строка «Ничего не закрыто» если пусто)
 
 ⏳ <b>В процессе:</b>
 • Название задачи
@@ -76,11 +61,19 @@ REPORT=$(claude --print --dangerously-skip-permissions \
 
 🔴 <b>Просрочено:</b>
 • Название задачи (дата)
-(или пропусти этот блок если нет)
+(максимум 5 штук, остальные: «...и ещё N»; пропусти блок если нет)
 
 📅 <b>Завтра в календаре:</b>
 • ЧЧ:ММ — Название события
 (или строка «Событий нет» если пусто)
+
+✅ <b>Задачи на завтра:</b>
+• Название задачи
+(или пропусти блок если нет)
+
+⏰ <b>Напоминания:</b>
+• ДД.ММ ЧЧ:ММ — Текст напоминания
+(или пропусти блок если нет активных напоминаний)
 
 ЗАПРЕЩЕНО АБСОЛЮТНО:
 - ## или # в начале строки
@@ -89,7 +82,7 @@ REPORT=$(claude --print --dangerously-skip-permissions \
 - --- разделители
 - Любой markdown
 ТОЛЬКО теги <b> <i> <code> и эмоджи.
-Максимум 1500 символов." \
+Максимум 2000 символов." \
     2>&1) || true
 cd "$PROJECT_DIR"
 
@@ -101,8 +94,7 @@ REPORT_CLEAN=$(echo "$REPORT" \
     | sed 's/\*\*\(.*\)\*\*/\1/g' \
     | sed 's/\*\([^*]*\)\*/\1/g' \
     | sed '/^---*$/d' \
-    | sed '/^|.*|$/d' \
-    | sed 's/^\([🌙✅⏳🔴📅]\) \(<b>\)\{0\}\(.*\)$/\1 <b>\3<\/b>/')
+    | sed '/^|.*|$/d')
 
 # Alert if Claude returned nothing useful
 if [ -z "$(echo "$REPORT_CLEAN" | tr -d '[:space:]')" ] && [ -n "$CHAT_ID" ]; then
