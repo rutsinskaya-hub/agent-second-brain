@@ -19,6 +19,7 @@ class Intent(Enum):
     NOTION_ACTION = "notion_action"  # Slow: update/write via Claude + MCP
     CHECK_EMAIL = "check_email"    # Fetch & analyze Gmail
     MANAGE_EMAIL = "manage_email"  # Delete/trash emails
+    CHECK_CALENDAR = "check_calendar"  # Show upcoming events
     SAVE = "save"
 
 
@@ -75,6 +76,17 @@ _MANAGE_EMAIL_PATTERNS = [
     r"\b(отпиши|отписать|отписаться)\s+от\b",
 ]
 
+_CALENDAR_PATTERNS = [
+    r"\b(календарь|расписание|расписани[еяю])\b",
+    r"\bчто\s+(у меня\s+)?(сегодня|завтра|на\s+неделе?)\s*(по\s+)?встреч",
+    r"\b(встреч[иа]|совещани[еяю]|созвон[ыа]?|звонк[иа]|мит(?:инг)?)\s+(на\s+)?(сегодня|завтра)",
+    r"\b(сегодня|завтра)\s+(какие\s+)?(встреч|совещани|созвон|мит(?:инг)?)",
+    r"\bкакие\s+(у меня\s+)?(встреч|мит(?:инг)?|событи)",
+    r"\bчто\s+в\s+календар",
+    r"\bсобыти[яей]\s+(на\s+)?(сегодня|завтра|неделю)",
+    r"\bcalendar\b",
+]
+
 _EMAIL_PATTERNS = [
     r"\bпроверь\s+(почту|почта|mail|email|имейл|мейл)",
     r"\b(что|чё|че)\s+(на\s+почте|в\s+почте|на\s+mail|в\s+mail)",
@@ -100,6 +112,9 @@ def classify(text: str) -> Intent:
     for pattern in _MANAGE_EMAIL_PATTERNS:
         if re.search(pattern, t):
             return Intent.MANAGE_EMAIL
+    for pattern in _CALENDAR_PATTERNS:
+        if re.search(pattern, t):
+            return Intent.CHECK_CALENDAR
     for pattern in _EMAIL_PATTERNS:
         if re.search(pattern, t):
             return Intent.CHECK_EMAIL

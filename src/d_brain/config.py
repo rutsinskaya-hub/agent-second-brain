@@ -38,6 +38,15 @@ class Settings(BaseSettings):
         default="gmail-token.json",
         description="Path to Gmail OAuth token file",
     )
+    calendar_token_path: str = Field(
+        default="calendar-token.json",
+        description="Path to Google Calendar OAuth token file",
+    )
+
+    @property
+    def calendar_enabled(self) -> bool:
+        """Check if Calendar token file exists."""
+        return Path(self.calendar_token_path).exists()
 
     @property
     def gmail_enabled(self) -> bool:

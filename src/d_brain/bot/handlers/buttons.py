@@ -42,6 +42,14 @@ async def btn_email(message: Message, settings: Settings) -> None:
     await cmd_email(message, settings)
 
 
+@router.message(F.text == "📅 Календарь")
+async def btn_calendar(message: Message, settings: Settings) -> None:
+    """Handle Calendar button."""
+    from d_brain.bot.handlers.calendar import check_calendar_intent
+
+    await check_calendar_intent(message, settings)
+
+
 @router.message(F.text == "✨ Запрос")
 async def btn_do(message: Message, state: FSMContext) -> None:
     """Handle Do button - set state and wait for input."""
