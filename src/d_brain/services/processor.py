@@ -313,7 +313,10 @@ TRASH_IDS:id1,id2,id3
 
     def parse_calendar_event(self, user_request: str) -> dict[str, Any]:
         """Ask Claude to extract event details from natural language."""
-        today = date.today()
+        from datetime import datetime, timezone
+
+        moscow_tz = timezone(timedelta(hours=3))
+        today = datetime.now(moscow_tz).date()
 
         prompt = f"""Извлеки данные события из запроса пользователя.
 
@@ -340,10 +343,12 @@ EVENT_LOCATION: место (или пусто)
 
     def parse_reminder(self, user_request: str) -> dict[str, Any]:
         """Ask Claude to extract reminder time and text from natural language."""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
-        today = date.today()
-        now = datetime.now().strftime("%H:%M")
+        moscow_tz = timezone(timedelta(hours=3))
+        moscow_now = datetime.now(moscow_tz)
+        today = moscow_now.date()
+        now = moscow_now.strftime("%H:%M")
 
         prompt = f"""Извлеки данные напоминания из запроса пользователя.
 
