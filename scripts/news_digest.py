@@ -64,7 +64,7 @@ def run_claude_digest(posts_text: str, topic_name: str) -> str:
 1. Убери дубликаты (одна и та же новость из разных каналов)
 2. Убери рекламу, промо-посты, анонсы курсов/вебинаров
 3. Отранжируй по важности и актуальности
-4. Выбери топ-15 самых важных/интересных
+4. Выбери топ-25 самых важных/интересных
 5. Для каждой новости: краткое описание (1-2 предложения) + ссылка
 
 ФОРМАТ (строго HTML для Telegram):
@@ -141,20 +141,34 @@ async def send_digest(bot_token: str, chat_id: int, topic_id: int | None, text: 
 
     bot = Bot(token=bot_token)
     try:
-        kwargs = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
-        if topic_id:
-            kwargs["message_thread_id"] = topic_id
-        await bot.send_message(**kwargs)
+        # Split into chunks of 4000 chars if needed
+        chunks = []
+        if len(text) <= 4000:
+            chunks = [text]
+        else:
+            lines = text.split("\n")
+            chunk = ""
+            for line in lines:
+                if len(chunk) + len(line) + 1 > 4000:
+                    chunks.append(chunk)
+                    chunk = line
+                else:
+                    chunk += "\n" + line if chunk else line
+            if chunk:
+                chunks.append(chunk)
+
+        for chunk in chunks:
+            kwargs = {"chat_id": chat_id, "text": chunk, "parse_mode": "HTML"}
+            if topic_id:
+                kwargs["message_thread_id"] = topic_id
+            try:
+                await bot.send_message(**kwargs)
+            except Exception:
+                kwargs["parse_mode"] = None
+                await bot.send_message(**kwargs)
         return True
     except Exception as e:
         logger.error("Failed to send digest: %s", e)
-        # Try without HTML
-        try:
-            kwargs["parse_mode"] = None
-            await bot.send_message(**kwargs)
-            return True
-        except Exception:
-            pass
         return False
     finally:
         await bot.session.close()
