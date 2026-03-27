@@ -1,17 +1,17 @@
-"""Handler for /do command - arbitrary Claude requests."""
+"""Handler for /do command - arbitrary Claude requests with streaming."""
 
 import logging
+from datetime import date
+from pathlib import Path
 
 from aiogram import Bot, Router
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
-from d_brain.bot.formatters import format_process_report
 from d_brain.bot.states import DoCommandState
-from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.processor import ClaudeProcessor
+from d_brain.services.streaming import StreamEvent, stream_claude
 from d_brain.services.transcription import DeepgramTranscriber
 
 router = Router(name="do")
@@ -24,7 +24,7 @@ async def cmd_do(message: Message, command: CommandObject, state: FSMContext, se
     user_id = message.from_user.id if message.from_user else 0
 
     if command.args:
-        await process_request(message, command.args, user_id, settings)
+        await process_request_streaming(message, command.args, settings)
         return
 
     await state.set_state(DoCommandState.waiting_for_input)
@@ -75,33 +75,86 @@ async def handle_do_input(message: Message, bot: Bot, state: FSMContext, setting
         await message.answer("❌ Отправь текст или голосовое сообщение")
         return
 
-    user_id = message.from_user.id if message.from_user else 0
-    await process_request(message, prompt, user_id, settings)
+    await process_request_streaming(message, prompt, settings)
 
 
-async def process_request(
+async def process_request_streaming(
     message: Message,
     prompt: str,
-    user_id: int = 0,
-    settings: Settings | None = None,
+    settings: Settings,
 ) -> None:
-    """Process the user's request with Claude."""
-    if settings is None:
-        from d_brain.config import get_settings
-        settings = get_settings()
+    """Process request with Claude streaming — show tool calls in real-time."""
+    today = date.today()
+    vault_path = Path(settings.vault_path)
+    mcp_config = (vault_path.parent / "mcp-config.json").resolve()
 
-    status_msg = await message.answer("⏳ Выполняю...")
+    full_prompt = f"""Ты - персональный ассистент d-brain.
 
-    processor = ClaudeProcessor(settings.vault_path, settings.notion_token)
+CONTEXT:
+- Текущая дата: {today}
+- Vault path: {vault_path}
 
-    report = await run_with_progress(
-        status_msg,
-        "Выполняю...",
-        lambda: processor.execute_prompt(prompt, user_id),
-    )
+MCP TOOLS:
+- Для задач используй Notion: mcp__notion__API-post-database-query (database_id: "305289eb-342c-80ec-856d-f1c014cdff68")
+- Для создания задач: mcp__notion__API-post-page
 
-    formatted = format_process_report(report)
+USER REQUEST:
+{prompt}
+
+CRITICAL OUTPUT FORMAT:
+- Return ONLY raw HTML for Telegram (parse_mode=HTML)
+- NO markdown: no **, no ##, no ```, no tables
+- Allowed tags: <b>, <i>, <code>, <s>, <u>
+- Be concise - Telegram has 4096 char limit"""
+
+    status_msg = await message.answer("⏳ Запускаю Claude...")
+    tool_messages: list[int] = []  # message IDs of tool call messages
+
     try:
-        await status_msg.edit_text(formatted)
-    except Exception:
-        await status_msg.edit_text(formatted, parse_mode=None)
+        async for event in stream_claude(
+            prompt=full_prompt,
+            cwd=vault_path.parent,
+            mcp_config=mcp_config if mcp_config.exists() else None,
+            notion_token=settings.notion_token,
+        ):
+            if event.kind == "tool_call":
+                try:
+                    tool_msg = await message.answer(event.tool_input)
+                    tool_messages.append(tool_msg.message_id)
+                except Exception:
+                    pass
+
+            elif event.kind == "done":
+                # Delete the status message
+                try:
+                    await status_msg.delete()
+                except Exception:
+                    pass
+
+                # Send final result
+                final_text = event.text.strip()
+                if not final_text:
+                    final_text = "✓ Выполнено"
+
+                # Add cost info
+                if event.duration_ms > 0:
+                    secs = event.duration_ms / 1000
+                    final_text += f"\n\n<i>⏱ {secs:.1f}s</i>"
+
+                try:
+                    await message.answer(final_text)
+                except Exception:
+                    await message.answer(final_text, parse_mode=None)
+
+            elif event.kind == "error":
+                try:
+                    await status_msg.edit_text(f"❌ {event.text}")
+                except Exception:
+                    await message.answer(f"❌ {event.text}")
+
+    except Exception as e:
+        logger.exception("Streaming error")
+        try:
+            await status_msg.edit_text(f"❌ Ошибка: {e}")
+        except Exception:
+            await message.answer(f"❌ Ошибка: {e}")

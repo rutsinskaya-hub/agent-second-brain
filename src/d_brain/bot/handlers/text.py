@@ -101,24 +101,8 @@ async def handle_text(message: Message, settings: Settings) -> None:
         session.append(user_id, "text", text=text, msg_id=message.message_id)
 
     elif intent == Intent.NOTION_ACTION:
-        status_msg = await message.answer("⏳ Выполняю...")
-        processor = ClaudeProcessor(settings.vault_path, settings.notion_token)
-
-        result = await run_with_progress(
-            status_msg,
-            "Выполняю...",
-            lambda: processor.execute_prompt(text, user_id),
-        )
-
-        if "error" in result:
-            await status_msg.edit_text(f"❌ {result['error']}")
-        else:
-            report = result.get("report", "✓ Выполнено")
-            try:
-                await status_msg.edit_text(report)
-            except Exception:
-                await status_msg.edit_text(report, parse_mode=None)
-
+        from d_brain.bot.handlers.do import process_request_streaming
+        await process_request_streaming(message, text, settings)
         storage.append_to_daily(text, timestamp, "[text][action]")
         session.append(user_id, "text", text=text, msg_id=message.message_id)
 

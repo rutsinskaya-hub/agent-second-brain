@@ -178,27 +178,11 @@ async def _handle_notion_action(
     user_id: int,
     settings: Settings,
 ) -> None:
-    """Slow path: delegate to Claude with Notion MCP."""
-    status_msg = await message.answer(f"🎤 <i>{transcript}</i>\n\n⏳ Выполняю...")
+    """Slow path: delegate to Claude with streaming."""
+    await message.answer(f"🎤 <i>{transcript}</i>")
 
-    processor = ClaudeProcessor(settings.vault_path, settings.notion_token)
-
-    result = await run_with_progress(
-        status_msg,
-        "Выполняю...",
-        lambda: processor.execute_prompt(transcript, user_id),
-    )
-
-    if "error" in result:
-        await status_msg.edit_text(
-            f"🎤 <i>{transcript}</i>\n\n❌ {result['error']}"
-        )
-    else:
-        report = result.get("report", "✓ Выполнено")
-        try:
-            await status_msg.edit_text(f"🎤 <i>{transcript}</i>\n\n{report}")
-        except Exception:
-            await status_msg.edit_text(f"🎤 <i>{transcript}</i>\n\n{report}", parse_mode=None)
+    from d_brain.bot.handlers.do import process_request_streaming
+    await process_request_streaming(message, transcript, settings)
 
     storage.append_to_daily(transcript, timestamp, "[voice][action]")
     session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
