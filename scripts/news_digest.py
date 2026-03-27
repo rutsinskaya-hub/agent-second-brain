@@ -173,7 +173,7 @@ async def process_topic(
 
     topic_name = topic_config.get("topic_name", topic_key)
     channels = topic_config.get("channels", [])
-    group_chat_id = topic_config.get("group_chat_id")
+    group_chat_id = config.get("group_chat_id")
     topic_id = topic_config.get("topic_id")
 
     if not channels:

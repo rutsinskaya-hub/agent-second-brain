@@ -1,43 +1,9 @@
 {
-  "group_chat_id": -1004794,
+  "group_chat_id": -1003704502190,
   "topics": {
-    "dc_energy": {
-      "topic_name": "🏭 ЦОД / Энергетика",
-      "topic_id": null,
-      "channels": [
-        {"username": "getasic", "name": "GetAsic - Майнинг под Ключ"},
-        {"username": "texterra", "name": "TexTerra"},
-        {"username": "digital_energy", "name": "Digital Energy"},
-        {"username": "tadviser", "name": "TAdviser"},
-        {"username": "ixcellerate", "name": "Дата-центры IXcellerate"},
-        {"username": "crocnews", "name": "КРОК"},
-        {"username": "nf_group", "name": "NF GROUP ПРО СКЛАДЫ"},
-        {"username": "t1cloud", "name": "Т1 Облако"},
-        {"username": "gurovdigital", "name": "Gurov Digital"}
-      ]
-    },
-    "ai": {
-      "topic_name": "🤖 Нейросети",
-      "topic_id": null,
-      "channels": [
-        {"username": "korenev_ai", "name": "Korenev AI"},
-        {"username": "controlled_hallucinations", "name": "Контролируемые галлюцинации"},
-        {"username": "n2d2ai", "name": "N2D2 AI"},
-        {"username": "gromovapro", "name": "ГромоваPRO | Нейросети"},
-        {"username": "neuroceh", "name": "Нейроцех"},
-        {"username": "lunapopik", "name": "Лунапопик Альтмана"},
-        {"username": "hi_ai_news", "name": "Hi, AI • Новости технологий"},
-        {"username": "rvachev", "name": "Мысли Рвачева"},
-        {"username": "molyanov", "name": "Молянов"},
-        {"username": "vakilova_ai", "name": "Vakilova. AI"},
-        {"username": "tarba_ai", "name": "Кристина Тарба о нейросетях"},
-        {"username": "ai_mindset", "name": "AI Mindset"},
-        {"username": "tips_ai", "name": "Tips AI | IT & AI"}
-      ]
-    },
     "marketing": {
       "topic_name": "📢 Маркетинг",
-      "topic_id": null,
+      "topic_id": 38,
       "channels": [
         {"username": "norm_marketing", "name": "Норм канал про маркетинг"},
         {"username": "tyzhexpert", "name": "#тыжэксперт"},
@@ -76,12 +42,43 @@
         {"username": "partisanmarketing", "name": "Партизанский Маркетинг"},
         {"username": "avokado_photo", "name": "украла авокадо с фотостоков"},
         {"username": "breakingtrends", "name": "Breaking Trends"},
-        {"username": "marketinghod", "name": "Маркетинговый ход"}
+        {"username": "texterra", "name": "TexTerra"}
+      ]
+    },
+    "dc_energy": {
+      "topic_name": "🏭 ЦОД и Энергетика",
+      "topic_id": 39,
+      "channels": [
+        {"username": "getasic", "name": "GetAsic - Майнинг под Ключ"},
+        {"username": "digital_energy", "name": "Digital Energy"},
+        {"username": "tadviser", "name": "TAdviser"},
+        {"username": "ixcellerate", "name": "Дата-центры IXcellerate"},
+        {"username": "crocnews", "name": "КРОК"},
+        {"username": "nf_group", "name": "NF GROUP ПРО СКЛАДЫ"},
+        {"username": "t1cloud", "name": "Т1 Облако"}
+      ]
+    },
+    "ai": {
+      "topic_name": "🤖 Нейросети",
+      "topic_id": 40,
+      "channels": [
+        {"username": "korenev_ai", "name": "Korenev AI"},
+        {"username": "controlled_hallucinations", "name": "Контролируемые галлюцинации"},
+        {"username": "n2d2ai", "name": "N2D2 AI"},
+        {"username": "gromovapro", "name": "ГромоваPRO | Нейросети"},
+        {"username": "neuroceh", "name": "Нейроцех"},
+        {"username": "lunapopik", "name": "Лунапопик Альтмана"},
+        {"username": "hi_ai_news", "name": "Hi, AI • Новости технологий"},
+        {"username": "rvachev", "name": "Мысли Рвачева"},
+        {"username": "vakilova_ai", "name": "Vakilova. AI"},
+        {"username": "tarba_ai", "name": "Кристина Тарба о нейросетях"},
+        {"username": "ai_mindset", "name": "AI Mindset"},
+        {"username": "tips_ai", "name": "Tips AI | IT & AI"}
       ]
     },
     "personal": {
       "topic_name": "📌 Личное",
-      "topic_id": null,
+      "topic_id": 41,
       "private_channels": [
         {"chat_id": -1003860968205, "name": "Для ИИ блога"},
         {"chat_id": -1001684022758, "name": "Ты мне, я тебе"}
