@@ -45,7 +45,7 @@
         {"username": "smm_eng", "name": "Цепляющий контент"},
         {"username": "ChelovekVM", "name": "Человеческое в Маркетинге"},
         {"username": "stratmarketing", "name": "Стратегия и маркетинг — Сергей Предко"},
-        {"username": "setters_media", "name": "SETTERS Media"},
+        {"username": "setters", "name": "SETTERS Media"},
         {"username": "hateagency", "name": "Hate Agency"},
         {"username": "funkybranding", "name": "Funky Branding"},
         {"username": "demisgroup", "name": "Demis Group"},
@@ -61,7 +61,31 @@
         {"username": "thecontentisthequeen", "name": "The Content is The Queen"},
         {"username": "multimediaworld", "name": "multimedia world"},
         {"username": "eventgeek", "name": "EventGeek"},
-        {"username": "nadobilovchera", "name": "Надо было вчера"}
+        {"username": "nadobilovchera", "name": "Надо было вчера"},
+        {"username": "EPigraphMag", "name": "EPigraph"},
+        {"username": "tetraform_design", "name": "Tetraform Media"},
+        {"username": "TrendMediaChannel", "name": "TRENDMEDIA"},
+        {"username": "skillaz_ru", "name": "Skillaz"},
+        {"username": "trendwatchin", "name": "Трендвотчер"},
+        {"username": "ukradeno", "name": "Идея украдена"},
+        {"username": "profit_maker", "name": "Инструменты маркетолога"},
+        {"username": "inter_comm", "name": "ИнтерКомм"},
+        {"username": "marketklad", "name": "Кладовая Маркетолога"},
+        {"username": "marzaganoff", "name": "Марзаганов вещает"},
+        {"username": "chizhovio", "name": "Студия Чижова"},
+        {"username": "sosicka", "name": "Сосисочная"},
+        {"username": "mavacado", "name": "украла авокадо с фотостоков"},
+        {"username": "sell_me", "name": "продай мне эту ручку"},
+        {"username": "boomers_TV", "name": "бумеры смотрят телек"},
+        {"username": "expocentre_msk", "name": "Экспоцентр PROвыставки"},
+        {"username": "RCBOnline", "name": "НКБ Онлайн"},
+        {"username": "garyfirst", "name": "Гари Фест"},
+        {"username": "smmshit", "name": "Креатив со звездочкой"},
+        {"username": "billion_creative", "name": "150 кейсов по продвижению"},
+        {"username": "sale_caviar", "name": "кабачковая икра по акции"},
+        {"username": "lidermnenij", "name": "лидер мнений среди удобрений"},
+        {"username": "nadobulovchera", "name": "Надо было вчера (2)"},
+        {"username": "Skillbox", "name": "Skillbox"}
       ]
     },
     "dc_energy": {
@@ -81,7 +105,9 @@
         {"username": "miningotel", "name": "Электричество ЦОД, Вычисления, Майнинг"},
         {"username": "dcunionchat", "name": "Чат-Ассоциация отрасли ЦОД"},
         {"username": "pro_100_mining", "name": "ПРО100 Майнинг"},
-        {"username": "cnewsconf", "name": "CNews. ИТ-мероприятия России"}
+        {"username": "cnewsconf", "name": "CNews. ИТ-мероприятия России"},
+        {"username": "redsoft1", "name": "РЕД СОФТ"},
+        {"username": "postdc", "name": "POST-DC / Сател"}
       ]
     },
     "ai": {
@@ -114,7 +140,9 @@
         {"username": "ai_exee", "name": "сбежавшая нейросеть"},
         {"username": "dzenopulse", "name": "Тимур Угулава"},
         {"username": "sale_caviar", "name": "кабачковая икра по акции"},
-        {"username": "lenivaya_neyroset", "name": "Ленивая нейросеть"}
+        {"username": "lenivaya_neyroset", "name": "Ленивая нейросеть"},
+        {"username": "rebrykblog", "name": "Rebryk Blog"},
+        {"username": "molyanov_blog", "name": "Молянов"}
       ]
     },
     "personal": {
