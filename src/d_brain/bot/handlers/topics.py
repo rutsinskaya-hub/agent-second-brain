@@ -132,20 +132,17 @@ async def handle_topic_message(
     settings: Settings,
     text: str | None = None,
 ) -> None:
-    """Handle a message in a forum topic with streaming Claude.
+    """Handle a message in a forum topic.
 
-    This is the main entry point for topic-based conversations.
+    First tries intent routing (email, calendar, tasks, reminders),
+    then falls back to streaming Claude for everything else.
     """
     if not topic_manager:
         return
 
     topic_id = message.message_thread_id
-    vault_path = Path(settings.vault_path)
-    default_cwd = str(vault_path.parent)
-    default_mcp = str((vault_path.parent / "mcp-config.json").resolve())
 
-    config = topic_manager.get_or_default(topic_id, default_cwd, default_mcp)
-
+    config = topic_manager.get_or_default(topic_id)
     if not config.enabled:
         return
 
@@ -170,9 +167,73 @@ async def handle_topic_message(
     if not user_text:
         return
 
-    today = date.today()
+    # ── Intent routing (same as private chat) ──────────────────────────
+    from d_brain.services.intent import Intent, classify
+
+    intent = classify(user_text) if settings.notion_token else Intent.SAVE
+
+    if intent == Intent.SET_REMINDER:
+        from d_brain.bot.handlers.reminder import set_reminder_intent
+        await set_reminder_intent(message, settings, user_text)
+        return
+
+    if intent == Intent.CREATE_TASK:
+        from d_brain.services.intent import extract_due_date, extract_project, extract_task_name
+        from d_brain.services.notion import NotionClient
+        task_name = extract_task_name(user_text)
+        project, task_name = extract_project(task_name)
+        due_date = extract_due_date(user_text)
+        try:
+            client = NotionClient(settings.notion_token)
+            await client.create_task(task_name, due_date, project)
+            project_info = f"\n📁 Проект: <b>{project}</b>" if project else ""
+            due_info = f"\n📅 Срок: <b>{due_date}</b>" if due_date else ""
+            await message.answer(f"✅ Задача добавлена\n📝 <b>{task_name}</b>{project_info}{due_info}")
+        except Exception as e:
+            await message.answer(f"❌ {e}")
+        return
+
+    if intent == Intent.QUERY_TASKS:
+        from d_brain.services.intent import classify_query, extract_query_project
+        from d_brain.services.notion import NotionClient, _format_tasks_reply
+        query_type = classify_query(user_text)
+        project = extract_query_project(user_text)
+        try:
+            client = NotionClient(settings.notion_token)
+            tasks = await client.query_tasks(query_type.value, project=project)
+            await message.answer(_format_tasks_reply(tasks, query_type.value, project=project))
+        except Exception as e:
+            await message.answer(f"❌ {e}")
+        return
+
+    if intent == Intent.CHECK_EMAIL:
+        from d_brain.bot.handlers.email import check_email_intent
+        await check_email_intent(message, settings)
+        return
+
+    if intent == Intent.MANAGE_EMAIL:
+        from d_brain.bot.handlers.email import manage_email_intent
+        await manage_email_intent(message, settings, user_text)
+        return
+
+    if intent == Intent.CHECK_CALENDAR:
+        from d_brain.bot.handlers.calendar import check_calendar_intent
+        await check_calendar_intent(message, settings, user_text)
+        return
+
+    if intent == Intent.CREATE_EVENT:
+        from d_brain.bot.handlers.calendar import create_event_intent
+        await create_event_intent(message, settings, user_text)
+        return
+
+    # ── Fallback: streaming Claude with topic config ───────────────────
+    vault_path = Path(settings.vault_path)
+    default_cwd = str(vault_path.parent)
+    default_mcp = str((vault_path.parent / "mcp-config.json").resolve())
+
     cwd = config.cwd or default_cwd
     mcp = config.mcp_config or default_mcp
+    today = date.today()
 
     full_prompt = f"""{config.prompt}
 
