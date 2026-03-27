@@ -91,10 +91,11 @@ def run_claude_digest(posts_text: str, topic_name: str) -> str:
     env = os.environ.copy()
     try:
         result = subprocess.run(
-            ["claude", "--print", "--dangerously-skip-permissions", "-p", prompt],
+            ["claude", "--print", "--dangerously-skip-permissions", "-p", "-"],
+            input=prompt,
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=180,
             cwd=str(PROJECT_DIR),
             env=env,
         )
@@ -187,6 +188,12 @@ async def process_topic(
     if not posts:
         logger.info("No new posts for %s", topic_name)
         return
+
+    # Limit to top 50 posts by views to avoid prompt overflow
+    if len(posts) > 50:
+        posts.sort(key=lambda p: p.views, reverse=True)
+        posts = posts[:50]
+        logger.info("Trimmed to top 50 posts by views")
 
     posts_text = format_posts_for_claude(posts, topic_name)
     logger.info("Running Claude digest for %s...", topic_name)
