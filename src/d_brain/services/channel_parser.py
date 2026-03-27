@@ -1,22 +1,22 @@
-"""Telegram channel parser via public t.me/s/ pages.
+"""Telegram channel parser via Telethon.
 
-Scrapes public preview pages — no auth, no risk of ban.
+Reads channels using authorized user session.
 Fetches posts from the last N hours, returns structured data.
 """
 
 from __future__ import annotations
 
 import logging
-import re
+import os
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
-
-import httpx
 
 logger = logging.getLogger(__name__)
 
 MOSCOW_TZ = timezone(timedelta(hours=3))
+PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
 @dataclass
@@ -42,118 +42,60 @@ class ChannelPost:
         }
 
 
+def _get_client():
+    """Create Telethon client with saved session."""
+    from telethon import TelegramClient
+
+    api_id = os.environ.get("TELEGRAM_API_ID", "37810955")
+    api_hash = os.environ.get("TELEGRAM_API_HASH", "e70b928b17a0681e8e622daecd000b77")
+    session_path = str(PROJECT_DIR / "telethon")
+
+    return TelegramClient(session_path, int(api_id), api_hash)
+
+
 async def fetch_channel_posts(
     username: str,
     channel_name: str = "",
     hours: int = 24,
     topic: str = "",
+    client=None,
 ) -> list[ChannelPost]:
-    """Fetch recent posts from a public Telegram channel.
+    """Fetch recent posts from a Telegram channel via Telethon."""
+    own_client = client is None
+    if own_client:
+        client = _get_client()
+        await client.connect()
 
-    Uses t.me/s/username — the public web preview.
-    """
-    url = f"https://t.me/s/{username}"
     posts: list[ChannelPost] = []
-    cutoff = datetime.now(MOSCOW_TZ) - timedelta(hours=hours)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
-            resp = await client.get(url, headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
-            })
-            if resp.status_code != 200:
-                logger.warning("Channel %s returned %d", username, resp.status_code)
-                return []
-            html = resp.text
-    except Exception:
-        logger.warning("Failed to fetch channel %s", username)
-        return []
+        entity = await client.get_entity(username)
+        messages = await client.get_messages(entity, limit=30)
 
-    # Parse posts from HTML
-    # Each post is in <div class="tgme_widget_message_wrap">
-    post_blocks = re.findall(
-        r'<div class="tgme_widget_message_wrap.*?">(.*?)</div>\s*</div>\s*</div>',
-        html,
-        re.DOTALL,
-    )
-
-    if not post_blocks:
-        # Try alternative pattern
-        post_blocks = re.findall(
-            r'data-post="([^"]+)".*?'
-            r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>.*?'
-            r'<time[^>]*datetime="([^"]+)"',
-            html,
-            re.DOTALL,
-        )
-        for post_id, text_html, date_str in post_blocks:
-            try:
-                dt = datetime.fromisoformat(date_str.replace("+00:00", "+00:00"))
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                dt_moscow = dt.astimezone(MOSCOW_TZ)
-            except (ValueError, TypeError):
+        for msg in messages:
+            if msg.date < cutoff:
+                continue
+            if not msg.text or len(msg.text.strip()) < 15:
                 continue
 
-            if dt_moscow < cutoff:
-                continue
+            dt_moscow = msg.date.astimezone(MOSCOW_TZ)
+            post_url = f"https://t.me/{username}/{msg.id}"
 
-            text = _clean_html(text_html)
-            if not text or len(text) < 10:
-                continue
-
-            post_url = f"https://t.me/{post_id}"
             posts.append(ChannelPost(
                 channel=username,
                 channel_name=channel_name or username,
-                text=text[:500],
+                text=msg.text[:500],
                 date=dt_moscow,
                 url=post_url,
+                views=msg.views or 0,
                 topic=topic,
             ))
-        return posts
-
-    # Fallback: extract all data-post and text blocks separately
-    data_posts = re.findall(r'data-post="([^"]+)"', html)
-    texts = re.findall(
-        r'<div class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>',
-        html,
-        re.DOTALL,
-    )
-    dates = re.findall(r'<time[^>]*datetime="([^"]+)"', html)
-    views_raw = re.findall(
-        r'<span class="tgme_widget_message_views">([^<]+)</span>',
-        html,
-    )
-
-    for i in range(min(len(data_posts), len(texts), len(dates))):
-        try:
-            dt = datetime.fromisoformat(dates[i].replace("+00:00", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            dt_moscow = dt.astimezone(MOSCOW_TZ)
-        except (ValueError, TypeError):
-            continue
-
-        if dt_moscow < cutoff:
-            continue
-
-        text = _clean_html(texts[i])
-        if not text or len(text) < 10:
-            continue
-
-        views = _parse_views(views_raw[i]) if i < len(views_raw) else 0
-        post_url = f"https://t.me/{data_posts[i]}"
-
-        posts.append(ChannelPost(
-            channel=username,
-            channel_name=channel_name or username,
-            text=text[:500],
-            date=dt_moscow,
-            url=post_url,
-            views=views,
-            topic=topic,
-        ))
+    except Exception as e:
+        logger.warning("Failed to fetch %s: %s", username, e)
+    finally:
+        if own_client:
+            await client.disconnect()
 
     return posts
 
@@ -163,57 +105,71 @@ async def fetch_multiple_channels(
     hours: int = 24,
     topic: str = "",
 ) -> list[ChannelPost]:
-    """Fetch posts from multiple channels.
+    """Fetch posts from multiple channels using a shared Telethon client."""
+    client = _get_client()
+    await client.connect()
 
-    channels: list of {"username": "@name", "name": "Display Name"}
-    """
-    import asyncio
+    all_posts: list[ChannelPost] = []
 
-    tasks = []
     for ch in channels:
         username = ch["username"].lstrip("@")
         name = ch.get("name", username)
-        tasks.append(fetch_channel_posts(username, name, hours, topic))
+        try:
+            posts = await fetch_channel_posts(username, name, hours, topic, client=client)
+            all_posts.extend(posts)
+            logger.info("Fetched %d posts from %s", len(posts), username)
+        except Exception as e:
+            logger.warning("Error fetching %s: %s", username, e)
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-
-    all_posts: list[ChannelPost] = []
-    for r in results:
-        if isinstance(r, list):
-            all_posts.extend(r)
-        elif isinstance(r, Exception):
-            logger.warning("Channel fetch error: %s", r)
+    await client.disconnect()
 
     all_posts.sort(key=lambda p: p.date, reverse=True)
     return all_posts
 
 
-def _clean_html(html: str) -> str:
-    """Strip HTML tags and clean up text."""
-    text = re.sub(r"<br\s*/?>", "\n", html)
-    text = re.sub(r"<[^>]+>", "", text)
-    text = re.sub(r"&nbsp;", " ", text)
-    text = re.sub(r"&amp;", "&", text)
-    text = re.sub(r"&lt;", "<", text)
-    text = re.sub(r"&gt;", ">", text)
-    text = re.sub(r"&quot;", '"', text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
+async def fetch_private_channel(
+    chat_id: int,
+    channel_name: str = "",
+    hours: int = 24,
+    client=None,
+) -> list[ChannelPost]:
+    """Fetch posts from a private channel by chat_id."""
+    own_client = client is None
+    if own_client:
+        client = _get_client()
+        await client.connect()
 
+    posts: list[ChannelPost] = []
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
-def _parse_views(raw: str) -> int:
-    """Parse view count like '1.2K' or '15'."""
-    raw = raw.strip()
-    if not raw:
-        return 0
-    multiplier = 1
-    if raw.endswith("K"):
-        multiplier = 1000
-        raw = raw[:-1]
-    elif raw.endswith("M"):
-        multiplier = 1000000
-        raw = raw[:-1]
     try:
-        return int(float(raw) * multiplier)
-    except ValueError:
-        return 0
+        entity = await client.get_entity(chat_id)
+        messages = await client.get_messages(entity, limit=30)
+
+        for msg in messages:
+            if msg.date < cutoff:
+                continue
+            text = msg.text or ""
+            # For forwarded messages, include forward info
+            if msg.forward and not text:
+                text = "[Forwarded]"
+            if not text or len(text.strip()) < 10:
+                continue
+
+            dt_moscow = msg.date.astimezone(MOSCOW_TZ)
+
+            posts.append(ChannelPost(
+                channel=str(chat_id),
+                channel_name=channel_name or str(chat_id),
+                text=text[:500],
+                date=dt_moscow,
+                url="",
+                views=msg.views or 0,
+            ))
+    except Exception as e:
+        logger.warning("Failed to fetch private channel %s: %s", chat_id, e)
+    finally:
+        if own_client:
+            await client.disconnect()
+
+    return posts
