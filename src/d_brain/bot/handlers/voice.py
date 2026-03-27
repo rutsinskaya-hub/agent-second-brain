@@ -25,6 +25,13 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
     if not message.voice or not message.from_user:
         return
 
+    # ── Forum Topics: route to topic handler ──────
+    if message.message_thread_id and message.chat.type in ("group", "supergroup"):
+        from d_brain.bot.handlers.topics import handle_topic_message, topic_manager
+        if topic_manager:
+            await handle_topic_message(message, bot, settings)
+            return
+
     await message.chat.do(action="typing")
 
     storage = VaultStorage(settings.vault_path)

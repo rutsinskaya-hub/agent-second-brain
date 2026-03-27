@@ -25,7 +25,7 @@ def create_bot(settings: Settings) -> Bot:
 
 def create_dispatcher() -> Dispatcher:
     """Create and configure the dispatcher with routers."""
-    from d_brain.bot.handlers import buttons, calendar, commands, do, email, forward, photo, process, reminder, task, text, voice, weekly
+    from d_brain.bot.handlers import buttons, calendar, commands, do, email, forward, photo, process, reminder, task, text, topics, voice, weekly
 
     # Use memory storage for FSM (required for /do and /task command states)
     dp = Dispatcher(storage=MemoryStorage())
@@ -38,6 +38,7 @@ def create_dispatcher() -> Dispatcher:
     dp.include_router(email.router)  # /email command
     dp.include_router(calendar.router)  # /calendar command
     dp.include_router(reminder.router)  # /reminders command
+    dp.include_router(topics.router)    # /topics, /topic_setup commands
     dp.include_router(do.router)     # Before voice/text to catch DoCommandState
     dp.include_router(buttons.router)  # Reply keyboard buttons
     dp.include_router(voice.router)
@@ -89,7 +90,9 @@ async def run_bot(settings: Settings) -> None:
     from pathlib import Path
 
     from d_brain.bot.handlers import reminder as reminder_handler
+    from d_brain.bot.handlers import topics as topics_handler
     from d_brain.services.reminders import ReminderScheduler
+    from d_brain.services.topics import TopicManager
 
     bot = create_bot(settings)
     dp = create_dispatcher()
@@ -111,6 +114,12 @@ async def run_bot(settings: Settings) -> None:
     count = sched.start_all()
     reminder_handler.scheduler = sched
     logger.info("Reminder scheduler started with %d active reminders", count)
+
+    # Initialize topic manager for Forum Topics
+    topics_path = Path(settings.vault_path) / "topics.json"
+    topic_mgr = TopicManager(topics_path)
+    topics_handler.topic_manager = topic_mgr
+    logger.info("Topic manager loaded with %d topics", len(topic_mgr.list_all()))
 
     # Register bot command menu visible in Telegram UI
     await bot.set_my_commands([

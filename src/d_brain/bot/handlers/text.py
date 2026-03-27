@@ -25,6 +25,16 @@ async def handle_text(message: Message, settings: Settings) -> None:
         return
 
     text = message.text
+
+    # ── Forum Topics: if in a group topic, route to topic handler ──────
+    if message.message_thread_id and message.chat.type in ("group", "supergroup"):
+        from d_brain.bot.handlers.topics import handle_topic_message, topic_manager
+        if topic_manager:
+            from aiogram import Bot
+            bot = Bot.get_current()
+            await handle_topic_message(message, bot, settings, text)
+            return
+
     storage = VaultStorage(settings.vault_path)
     timestamp = datetime.fromtimestamp(message.date.timestamp())
     user_id = message.from_user.id
