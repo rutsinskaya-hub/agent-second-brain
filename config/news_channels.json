@@ -1,0 +1,96 @@
+{
+  "group_chat_id": -1004794,
+  "topics": {
+    "dc_energy": {
+      "topic_name": "🏭 ЦОД / Энергетика",
+      "topic_id": null,
+      "channels": [
+        {"username": "getasic", "name": "GetAsic - Майнинг под Ключ"},
+        {"username": "texterra", "name": "TexTerra"},
+        {"username": "digital_energy", "name": "Digital Energy"},
+        {"username": "tadviser", "name": "TAdviser"},
+        {"username": "ixcellerate", "name": "Дата-центры IXcellerate"},
+        {"username": "crocnews", "name": "КРОК"},
+        {"username": "nf_group", "name": "NF GROUP ПРО СКЛАДЫ"},
+        {"username": "t1cloud", "name": "Т1 Облако"},
+        {"username": "gurovdigital", "name": "Gurov Digital"}
+      ]
+    },
+    "ai": {
+      "topic_name": "🤖 Нейросети",
+      "topic_id": null,
+      "channels": [
+        {"username": "korenev_ai", "name": "Korenev AI"},
+        {"username": "controlled_hallucinations", "name": "Контролируемые галлюцинации"},
+        {"username": "n2d2ai", "name": "N2D2 AI"},
+        {"username": "gromovapro", "name": "ГромоваPRO | Нейросети"},
+        {"username": "neuroceh", "name": "Нейроцех"},
+        {"username": "lunapopik", "name": "Лунапопик Альтмана"},
+        {"username": "hi_ai_news", "name": "Hi, AI • Новости технологий"},
+        {"username": "rvachev", "name": "Мысли Рвачева"},
+        {"username": "molyanov", "name": "Молянов"},
+        {"username": "vakilova_ai", "name": "Vakilova. AI"},
+        {"username": "tarba_ai", "name": "Кристина Тарба о нейросетях"},
+        {"username": "ai_mindset", "name": "AI Mindset"},
+        {"username": "tips_ai", "name": "Tips AI | IT & AI"}
+      ]
+    },
+    "marketing": {
+      "topic_name": "📢 Маркетинг",
+      "topic_id": null,
+      "channels": [
+        {"username": "norm_marketing", "name": "Норм канал про маркетинг"},
+        {"username": "tyzhexpert", "name": "#тыжэксперт"},
+        {"username": "thecontentisthequeen", "name": "The Content is The Queen"},
+        {"username": "rus_digital", "name": "Русский диджитал"},
+        {"username": "mediazavtrak", "name": "МЕДИАЗАВТРАК"},
+        {"username": "gurovdigital", "name": "Gurov Digital"},
+        {"username": "eventlive", "name": "Реальный Event LIVE"},
+        {"username": "multimediaworld", "name": "multimedia world"},
+        {"username": "hateagency", "name": "Hate Agency"},
+        {"username": "funkybranding", "name": "Funky Branding"},
+        {"username": "demisgroup", "name": "Demis Group"},
+        {"username": "skillaz", "name": "Skillaz"},
+        {"username": "vmeste_channel", "name": "ВМЕСТЕ"},
+        {"username": "trendmedia", "name": "TRENDMEDIA"},
+        {"username": "roscongress", "name": "Росконгресс Директ"},
+        {"username": "brandsmedia", "name": "бренды & медиа"},
+        {"username": "smmplanner", "name": "SMMplanner"},
+        {"username": "tru_marketing", "name": "Тру.Маркетинг | Первухин"},
+        {"username": "nadobilovchera", "name": "Надо было вчера"},
+        {"username": "kabachkovaya", "name": "кабачковая икра по акции"},
+        {"username": "lidermnenij", "name": "лидер мнений среди удобрений"},
+        {"username": "hotdigital", "name": "ХОТ ДИДЖИТАЛ"},
+        {"username": "telemetr_me", "name": "Телеметр"},
+        {"username": "oldschoolmarketing", "name": "олдскульный маркетинг"},
+        {"username": "trendwatching_ru", "name": "TrendWatching"},
+        {"username": "we_branding", "name": "We Branding"},
+        {"username": "pressfeed", "name": "Pressfeed"},
+        {"username": "designsniper", "name": "Дизайн-снайпер"},
+        {"username": "setters_media", "name": "SETTERS Media"},
+        {"username": "bogimarketinga", "name": "Боги маркетинга"},
+        {"username": "stratmarketing", "name": "Стратегия и маркетинг"},
+        {"username": "besposhhadnyj_digital", "name": "Беспощадный диджитал"},
+        {"username": "marketpsy", "name": "Психология Маркетинга"},
+        {"username": "eventgeek", "name": "EventGeek"},
+        {"username": "partisanmarketing", "name": "Партизанский Маркетинг"},
+        {"username": "avokado_photo", "name": "украла авокадо с фотостоков"},
+        {"username": "breakingtrends", "name": "Breaking Trends"},
+        {"username": "marketinghod", "name": "Маркетинговый ход"}
+      ]
+    },
+    "personal": {
+      "topic_name": "📌 Личное",
+      "topic_id": null,
+      "private_channels": [
+        {"chat_id": -1003860968205, "name": "Для ИИ блога"},
+        {"chat_id": -1001684022758, "name": "Ты мне, я тебе"}
+      ]
+    }
+  },
+  "schedule": {
+    "hours_lookback": 24,
+    "max_posts_per_channel": 10,
+    "digest_max_items": 15
+  }
+}
