@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime
 
-from aiogram import Router
+from aiogram import Bot, Router
 from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @router.message(lambda m: m.text is not None and not m.text.startswith("/"))
-async def handle_text(message: Message, settings: Settings) -> None:
+async def handle_text(message: Message, bot: Bot, settings: Settings) -> None:
     """Handle text messages with intent routing."""
     if not message.text or not message.from_user:
         return
@@ -30,8 +30,6 @@ async def handle_text(message: Message, settings: Settings) -> None:
     if message.message_thread_id and message.chat.type in ("group", "supergroup"):
         from d_brain.bot.handlers.topics import handle_topic_message, topic_manager
         if topic_manager:
-            from aiogram import Bot
-            bot = Bot.get_current()
             await handle_topic_message(message, bot, settings, text)
             return
 
