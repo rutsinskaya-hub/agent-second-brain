@@ -6,6 +6,8 @@ Fetches posts from the last N hours, returns structured data.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -17,6 +19,21 @@ logger = logging.getLogger(__name__)
 
 MOSCOW_TZ = timezone(timedelta(hours=3))
 PROJECT_DIR = Path(__file__).resolve().parent.parent.parent.parent
+ENTITY_CACHE_PATH = PROJECT_DIR / "config" / "entity_cache.json"
+
+
+def _load_entity_cache() -> dict[str, int]:
+    if ENTITY_CACHE_PATH.exists():
+        try:
+            return json.loads(ENTITY_CACHE_PATH.read_text())
+        except Exception:
+            return {}
+    return {}
+
+
+def _save_entity_cache(cache: dict[str, int]) -> None:
+    ENTITY_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    ENTITY_CACHE_PATH.write_text(json.dumps(cache, indent=2))
 
 
 @dataclass
@@ -70,7 +87,16 @@ async def fetch_channel_posts(
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
     try:
-        entity = await client.get_entity(username)
+        # Use cached entity ID to avoid ResolveUsername flood bans
+        cache = _load_entity_cache()
+        if username in cache:
+            entity = await client.get_entity(cache[username])
+        else:
+            entity = await client.get_entity(username)
+            cache[username] = entity.id
+            _save_entity_cache(cache)
+            await asyncio.sleep(1)  # Rate limit on new resolves
+
         messages = await client.get_messages(entity, limit=30)
 
         for msg in messages:
