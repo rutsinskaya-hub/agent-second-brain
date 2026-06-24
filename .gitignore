@@ -2,6 +2,7 @@
 .env
 gcp-oauth.keys.json
 gmail-token.json
+calendar-token.json
 .env.local
 .env.*.local
 

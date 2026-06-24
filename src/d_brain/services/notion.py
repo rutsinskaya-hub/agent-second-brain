@@ -110,6 +110,14 @@ class NotionClient:
             filters = {"property": "Срок выполнения", "date": {"equals": tomorrow}}
         elif query_type == "in_progress":
             filters = {"property": "Status", "status": {"equals": "In progress"}}
+        elif query_type == "daily":
+            # Habits from the mind map branch "🔁 Ежедневно" — synced with that label in the title
+            filters = {
+                "and": [
+                    {"property": "Задача", "title": {"contains": "Ежедневно"}},
+                    {"property": "Status", "status": {"does_not_equal": "Done"}},
+                ]
+            }
         else:  # all — exclude Done
             filters = {"property": "Status", "status": {"does_not_equal": "Done"}}
 

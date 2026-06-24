@@ -6,6 +6,7 @@ Outputs structured text to stdout for injection into Claude prompt.
 
 import asyncio
 import os
+import re
 import sys
 from datetime import date, timedelta, timezone
 
@@ -67,11 +68,20 @@ async def fetch_tasks() -> str:
         client = NotionClient(token)
         today = date.today().isoformat()
 
-        overdue = await client.query_tasks("overdue", limit=10)
-        today_tasks = await client.query_tasks("today", limit=10)
+        overdue = await client.query_tasks("overdue", limit=20)
+        today_tasks = await client.query_tasks("today", limit=30)
         in_progress = await client.query_tasks("in_progress", limit=10)
+        daily = await client.query_tasks("daily", limit=15)
 
         lines = [f"=== ЗАДАЧИ (Notion) ===\n"]
+
+        if daily:
+            lines.append("ЕЖЕДНЕВНЫЕ ПРИВЫЧКИ:")
+            for t in daily:
+                # strip the "<emoji> [label] " prefix the sync embeds in the title
+                clean = re.sub(r"^[^\[]*\[[^\]]*\]\s*", "", t["name"]).strip()
+                lines.append(f"- {clean or t['name']}")
+            lines.append("")
 
         if overdue:
             lines.append("ПРОСРОЧЕНО:")

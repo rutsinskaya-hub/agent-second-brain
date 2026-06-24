@@ -233,7 +233,7 @@ async def main():
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--topic", default="all", help="Topic to process: marketing|dc_energy|ai|personal|all")
+    parser.add_argument("--topic", default="all", help="Topic to process: marketing|ai|all")
     parser.add_argument("--hours", type=int, default=24, help="Hours to look back")
     parser.add_argument("--dry-run", action="store_true", help="Don't send to Telegram, just print")
     args = parser.parse_args()
@@ -250,7 +250,7 @@ async def main():
 
     topics_to_process = []
     if args.topic == "all":
-        topics_to_process = ["marketing", "dc_energy", "ai"]
+        topics_to_process = ["marketing", "ai"]
     else:
         topics_to_process = [args.topic]
 
