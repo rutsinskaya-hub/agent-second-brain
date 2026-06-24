@@ -2,7 +2,6 @@
 .env
 gcp-oauth.keys.json
 gmail-token.json
-calendar-token.json
 .env.local
 .env.*.local
 
@@ -27,3 +26,10 @@ node_modules/
 # OS
 .DS_Store
 Thumbs.db
+
+# Credentials / sessions (added 2026-06-10)
+calendar-token.json
+telethon.session
+
+# Secrets — MCP server config (Trello/Notion/Google keys)
+mcp-config.json
