@@ -78,6 +78,32 @@ async def handle_do_input(message: Message, bot: Bot, state: FSMContext, setting
     await process_request_streaming(message, prompt, settings)
 
 
+def _progress_label(tool_name: str) -> str:
+    """Map a raw tool name to a human-friendly progress line.
+
+    Returns "" for internal steps that should not be shown to the user.
+    """
+    name = tool_name.lower()
+    # Internal plumbing — hide from the user
+    if "toolsearch" in name:
+        return ""
+    if "notion" in name:
+        if "query" in name:
+            return "🔍 Ищу задачу в Notion..."
+        if "patch" in name or "update" in name:
+            return "✏️ Обновляю задачу..."
+        if "post-page" in name or "create" in name:
+            return "➕ Создаю задачу..."
+        return "📋 Работаю с Notion..."
+    if name in ("read", "glob", "grep"):
+        return "🔍 Ищу..."
+    if name in ("write", "edit"):
+        return "✏️ Записываю..."
+    if name == "bash":
+        return "⚙️ Выполняю..."
+    return "⏳ Работаю..."
+
+
 async def process_request_streaming(
     message: Message,
     prompt: str,
@@ -107,8 +133,8 @@ CRITICAL OUTPUT FORMAT:
 - Allowed tags: <b>, <i>, <code>, <s>, <u>
 - Be concise - Telegram has 4096 char limit"""
 
-    status_msg = await message.answer("⏳ Запускаю Claude...")
-    tool_messages: list[int] = []  # message IDs of tool call messages
+    status_msg = await message.answer("⏳ Работаю...")
+    last_status = "⏳ Работаю..."
 
     try:
         async for event in stream_claude(
@@ -118,11 +144,16 @@ CRITICAL OUTPUT FORMAT:
             notion_token=settings.notion_token,
         ):
             if event.kind == "tool_call":
-                try:
-                    tool_msg = await message.answer(event.tool_input)
-                    tool_messages.append(tool_msg.message_id)
-                except Exception:
-                    pass
+                # Update the single status message with a friendly progress
+                # label instead of spamming a new message per tool call.
+                # Internal steps (e.g. ToolSearch) are hidden entirely.
+                label = _progress_label(event.tool_name)
+                if label and label != last_status:
+                    last_status = label
+                    try:
+                        await status_msg.edit_text(label)
+                    except Exception:
+                        pass
 
             elif event.kind == "done":
                 # Delete the status message
