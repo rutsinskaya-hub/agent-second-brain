@@ -47,8 +47,9 @@ _CREATE_PATTERNS = [
 _QUERY_PATTERNS = [
     r"\b(покажи|покажи?те|отобрази|выведи|список)\s+.{0,30}(задач|задани)",
     r"\bкакие\s+(у меня\s+)?(задач|задани|дела)\b",
-    r"\b(просроченн|незакрыт|активн|не сделан)\b.{0,20}задач",
-    r"\bзадач.{0,20}(просроченн|незакрыт|активн)\b",
+    r"\b(просроченн|незакрыт|активн|не\s*сделан)\w*.{0,20}задач",
+    r"\bзадач\w*.{0,20}(просроченн|незакрыт|активн)\w*",
+    r"\bкакие\s+(у\s+меня\s+)?.{0,20}задач",
     r"\bчто\s+(у меня\s+)?(стоит|есть|висит|осталось|запланировано)\b",
     r"\bпланы?\s+на\s+(сегодня|завтра|неделю)\b",
     r"\b(найди|найти|поиск)\s+задач",
@@ -61,8 +62,10 @@ _QUERY_PATTERNS = [
 
 _ACTION_PATTERNS = [
     # Mark done
-    r"\b(отметь|помети|поставь)\s+.{0,40}(выполнен|готов|сделан|закрыт)",
-    r"\b(выполнил[аи]?|сделал[аи]?|закрыл[аи]?)\s+(задачу|это|её)\b",
+    r"\b(отмет[ьи]|помет[ьи]|поставь|закрой|заверши)\s+.{0,40}(выполнен|готов|сделан|закрыт)",
+    r"\b(закрой|заверши|выполни)\s+.{0,40}задач",
+    r"\b(выполнил[аи]?|сделал[аи]?|закрыл[аи]?)\s+(задачу|это|её|таск)\b",
+    r"\bзадач[уа]\s+.{0,40}\s*(выполнен|готов|сделан|закрыт)",
     r"\bзадача\s+.{0,40}\s+(выполнена|готова|сделана|закрыта)\b",
     # Update deadline
     r"\bперенеси\s+.{0,60}\s+на\s+",
@@ -119,15 +122,18 @@ def classify(text: str) -> Intent:
     for pattern in _REMINDER_PATTERNS:
         if re.search(pattern, t):
             return Intent.SET_REMINDER
+    # Mark-done / update actions must win over CREATE: the create patterns are
+    # greedy ("задачу <word>" matches any sentence mentioning a task), so an
+    # action like "пометь сделанным задачу X" would otherwise be misread as new.
+    for pattern in _ACTION_PATTERNS:
+        if re.search(pattern, t):
+            return Intent.NOTION_ACTION
     for pattern in _CREATE_PATTERNS:
         if re.search(pattern, t):
             return Intent.CREATE_TASK
     for pattern in _QUERY_PATTERNS:
         if re.search(pattern, t):
             return Intent.QUERY_TASKS
-    for pattern in _ACTION_PATTERNS:
-        if re.search(pattern, t):
-            return Intent.NOTION_ACTION
     for pattern in _MANAGE_EMAIL_PATTERNS:
         if re.search(pattern, t):
             return Intent.MANAGE_EMAIL
