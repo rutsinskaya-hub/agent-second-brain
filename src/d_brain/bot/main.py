@@ -25,13 +25,14 @@ def create_bot(settings: Settings) -> Bot:
 
 def create_dispatcher() -> Dispatcher:
     """Create and configure the dispatcher with routers."""
-    from d_brain.bot.handlers import buttons, calendar, commands, do, email, forward, photo, process, reminder, task, text, topics, voice, weekly
+    from d_brain.bot.handlers import briefing, buttons, calendar, commands, do, email, forward, photo, process, reminder, task, text, topics, voice, weekly
 
     # Use memory storage for FSM (required for /do and /task command states)
     dp = Dispatcher(storage=MemoryStorage())
 
     # Register routers - ORDER MATTERS
     dp.include_router(commands.router)
+    dp.include_router(briefing.router)  # /briefing command
     dp.include_router(process.router)
     dp.include_router(weekly.router)
     dp.include_router(task.router)   # Before do/text to catch TaskCommandState
@@ -125,6 +126,7 @@ async def run_bot(settings: Settings) -> None:
     # Built dynamically so it reflects what is actually wired up: email and
     # calendar appear only when their Google tokens exist.
     commands = [
+        BotCommand(command="briefing",  description="Прислать утренний брифинг сейчас"),
         BotCommand(command="task",      description="Добавить задачу в Notion"),
         BotCommand(command="do",        description="Поручить ассистенту любой запрос"),
         BotCommand(command="status",    description="Что записано сегодня"),

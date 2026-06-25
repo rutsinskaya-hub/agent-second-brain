@@ -18,6 +18,7 @@ router = Router(name="commands")
 async def cmd_start(message: Message, settings: Settings) -> None:
     """Handle /start command."""
     cmds = [
+        "/briefing — прислать утренний брифинг сейчас",
         "/task — добавить задачу в Notion",
         "/do — поручить ассистенту любой запрос",
         "/status — что записано сегодня",
@@ -60,6 +61,7 @@ async def cmd_help(message: Message, settings: Settings) -> None:
         "<b>Что сохраняю в дневник:</b>\n"
         "🎤 голос (транскрибирую) · 💬 текст · 📷 фото · ↩️ пересланное\n\n"
         "<b>Команды:</b>\n"
+        "/briefing — прислать утренний брифинг сейчас\n"
         "/task — быстро добавить задачу\n"
         "/do — произвольный запрос к ассистенту\n"
         "/status — сколько записей сегодня\n"
