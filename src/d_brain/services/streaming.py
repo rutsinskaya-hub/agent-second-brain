@@ -107,6 +107,10 @@ async def stream_claude(
             stderr=asyncio.subprocess.PIPE,
             cwd=str(cwd),
             env=env,
+            # stream-json emits one JSON object per line; a large MCP result
+            # (e.g. a big Notion query) can exceed asyncio's default 64KB line
+            # buffer and crash readline with LimitOverrunError. Give it room.
+            limit=16 * 1024 * 1024,  # 16 MB per line
         )
     except FileNotFoundError:
         yield StreamEvent(kind="error", text="Claude CLI не установлен")
