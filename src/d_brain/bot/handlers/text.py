@@ -8,7 +8,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_query_project, extract_task_name
+from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
 from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
@@ -113,6 +113,14 @@ async def handle_text(message: Message, bot: Bot, settings: Settings) -> None:
         await process_request_streaming(message, text, settings)
         storage.append_to_daily(text, timestamp, "[text][action]")
         session.append(user_id, "text", text=text, msg_id=message.message_id)
+
+    elif settings.notion_token and has_command_smell(text):
+        # Hybrid fallback: regex was unsure but it smells like a command.
+        # Let Claude understand any phrasing; it saves as a note if it isn't one.
+        from d_brain.bot.handlers.do import process_request_streaming
+        await process_request_streaming(message, text, settings, note_fallback=True)
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
+        logger.info("Text routed to LLM fallback: %s", text[:60])
 
     else:
         # Default: save to vault
