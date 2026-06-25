@@ -8,7 +8,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_query_project, extract_task_name
+from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
 from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
@@ -101,6 +101,16 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
 
         elif intent == Intent.NOTION_ACTION:
             await _handle_notion_action(message, transcript, timestamp, storage, session, user_id, settings)
+
+        elif settings.notion_token and has_command_smell(transcript):
+            # Hybrid fallback: regex unsure but it smells like a command.
+            # Claude understands any phrasing; saves as a note if it isn't one.
+            await message.answer(f"🎤 <i>{transcript}</i>")
+            from d_brain.bot.handlers.do import process_request_streaming
+            await process_request_streaming(message, transcript, settings, note_fallback=True)
+            session.append(user_id, "voice", text=transcript,
+                           duration=message.voice.duration, msg_id=message.message_id)
+            logger.info("Voice routed to LLM fallback: %s", transcript[:60])
 
         else:
             # Default: save to vault

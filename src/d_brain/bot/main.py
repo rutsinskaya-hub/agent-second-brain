@@ -121,19 +121,25 @@ async def run_bot(settings: Settings) -> None:
     topics_handler.topic_manager = topic_mgr
     logger.info("Topic manager loaded with %d topics", len(topic_mgr.list_all()))
 
-    # Register bot command menu visible in Telegram UI
-    await bot.set_my_commands([
-        BotCommand(command="task",      description="Быстро добавить задачу в Notion"),
-        BotCommand(command="status",    description="Статус записей за сегодня"),
-        BotCommand(command="process",   description="Обработать записи за день"),
-        BotCommand(command="email",     description="Проверить почту"),
-        BotCommand(command="calendar",  description="Расписание на сегодня"),
+    # Register bot command menu visible in Telegram UI.
+    # Built dynamically so it reflects what is actually wired up: email and
+    # calendar appear only when their Google tokens exist.
+    commands = [
+        BotCommand(command="task",      description="Добавить задачу в Notion"),
+        BotCommand(command="do",        description="Поручить ассистенту любой запрос"),
+        BotCommand(command="status",    description="Что записано сегодня"),
         BotCommand(command="reminders", description="Активные напоминания"),
-        BotCommand(command="do",        description="Произвольный запрос к Claude"),
-        BotCommand(command="weekly",    description="Недельный дайджест"),
-        BotCommand(command="help",      description="Справка"),
-    ])
-    logger.info("Bot commands registered")
+        BotCommand(command="weekly",    description="Недельный дайджест из заметок"),
+        BotCommand(command="process",   description="Разобрать записи дня"),
+    ]
+    if settings.gmail_enabled:
+        commands.append(BotCommand(command="email", description="Проверить почту"))
+    if settings.calendar_enabled:
+        commands.append(BotCommand(command="calendar", description="Расписание на сегодня"))
+    commands.append(BotCommand(command="help", description="Что я умею"))
+    await bot.set_my_commands(commands)
+    logger.info("Bot commands registered: %d (gmail=%s, calendar=%s)",
+                len(commands), settings.gmail_enabled, settings.calendar_enabled)
 
     logger.info("Starting bot polling...")
     try:

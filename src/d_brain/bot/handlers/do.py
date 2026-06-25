@@ -104,15 +104,33 @@ def _progress_label(tool_name: str) -> str:
     return "⏳ Работаю..."
 
 
+_NOTE_SENTINEL = "__NOTE__"
+
+
 async def process_request_streaming(
     message: Message,
     prompt: str,
     settings: Settings,
+    note_fallback: bool = False,
 ) -> None:
-    """Process request with Claude streaming — show tool calls in real-time."""
+    """Process request with Claude streaming — show tool calls in real-time.
+
+    When *note_fallback* is True, the message reached here because the fast
+    regex router was unsure. Claude decides: act on the task, or — if it is
+    just a note with no task action — return the sentinel so we save it.
+    """
     today = date.today()
     vault_path = Path(settings.vault_path)
     mcp_config = (vault_path.parent / "mcp-config.json").resolve()
+
+    note_clause = ""
+    if note_fallback:
+        note_clause = (
+            "\n\nVERY IMPORTANT: If this message is NOT a task command "
+            "(create/move/complete/query a task or set a reminder) but just a "
+            f"thought or note to remember, reply with EXACTLY {_NOTE_SENTINEL} "
+            "and do nothing else."
+        )
 
     full_prompt = f"""Ты - персональный ассистент d-brain.
 
@@ -125,7 +143,7 @@ MCP TOOLS:
 - Для создания задач: mcp__notion__API-post-page
 
 USER REQUEST:
-{prompt}
+{prompt}{note_clause}
 
 CRITICAL OUTPUT FORMAT:
 - Return ONLY raw HTML for Telegram (parse_mode=HTML)
@@ -164,6 +182,17 @@ CRITICAL OUTPUT FORMAT:
 
                 # Send final result
                 final_text = event.text.strip()
+
+                # Note fallback: Claude decided this was just a note → save it
+                if note_fallback and _NOTE_SENTINEL in final_text:
+                    from datetime import datetime
+                    from d_brain.services.storage import VaultStorage
+                    VaultStorage(settings.vault_path).append_to_daily(
+                        prompt, datetime.now(), "[note]")
+                    await message.answer("✓ Сохранено")
+                    logger.info("LLM fallback: saved as note (%d chars)", len(prompt))
+                    continue
+
                 if not final_text:
                     final_text = "✓ Выполнено"
 
