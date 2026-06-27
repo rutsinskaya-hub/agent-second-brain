@@ -134,14 +134,15 @@ async def run_bot(settings: Settings) -> None:
         BotCommand(command="weekly",    description="Недельный дайджест из заметок"),
         BotCommand(command="process",   description="Разобрать записи дня"),
     ]
-    if settings.gmail_enabled:
+    if settings.anko_mail_enabled or settings.gmail_enabled:
         commands.append(BotCommand(command="email", description="Проверить почту"))
     if settings.calendar_enabled:
         commands.append(BotCommand(command="calendar", description="Расписание на сегодня"))
     commands.append(BotCommand(command="help", description="Что я умею"))
     await bot.set_my_commands(commands)
-    logger.info("Bot commands registered: %d (gmail=%s, calendar=%s)",
-                len(commands), settings.gmail_enabled, settings.calendar_enabled)
+    logger.info("Bot commands registered: %d (anko_mail=%s, gmail=%s, calendar=%s)",
+                len(commands), settings.anko_mail_enabled, settings.gmail_enabled,
+                settings.calendar_enabled)
 
     logger.info("Starting bot polling...")
     try:
