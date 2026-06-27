@@ -1,0 +1,179 @@
+#!/usr/bin/env python3
+"""Collect evening summary data: today's tasks + tomorrow's calendar + reminders.
+
+Outputs structured text to stdout for injection into Claude prompt.
+"""
+
+import asyncio
+import json
+import os
+import sys
+from datetime import date, datetime, timedelta, timezone
+
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(PROJECT_DIR, "src"))
+
+MOSCOW_TZ = timezone(timedelta(hours=3))
+
+
+def fetch_tomorrow_calendar() -> str:
+    """Fetch tomorrow's calendar events."""
+    try:
+        from d_brain.services.calendar import CalendarClient
+
+        creds = os.path.join(PROJECT_DIR, "gcp-oauth.keys.json")
+        token = os.path.join(PROJECT_DIR, "calendar-token.json")
+        client = CalendarClient(creds, token)
+
+        if not client.enabled:
+            return ""
+
+        # Fetch 2 days to cover tomorrow regardless of timezone
+        events = client.fetch_events(days=2, max_results=20)
+
+        # Filter to tomorrow only
+        moscow_now = datetime.now(MOSCOW_TZ)
+        tomorrow = (moscow_now + timedelta(days=1)).date()
+
+        tomorrow_events = []
+        for ev in events:
+            sort_key = ev.get("start_sort", "")
+            try:
+                ev_date = datetime.fromisoformat(sort_key).date()
+            except (ValueError, TypeError):
+                ev_date = tomorrow  # all-day events: include
+            if ev_date == tomorrow:
+                tomorrow_events.append(ev)
+
+        if not tomorrow_events:
+            return "=== КАЛЕНДАРЬ НА ЗАВТРА ===\nСобытий нет.\n=== КОНЕЦ КАЛЕНДАРЯ ==="
+
+        lines = [f"=== КАЛЕНДАРЬ НА ЗАВТРА ({tomorrow}, {len(tomorrow_events)} событий) ===\n"]
+        for ev in tomorrow_events:
+            if ev["all_day"]:
+                time_str = "весь день"
+            else:
+                time_str = f"{ev['start']}–{ev['end']}" if ev["end"] else ev["start"]
+            line = f"- {time_str}: {ev['summary']}"
+            if ev["location"]:
+                line += f" ({ev['location'][:30]})"
+            lines.append(line)
+        lines.append("=== КОНЕЦ КАЛЕНДАРЯ ===")
+        return "\n".join(lines)
+    except Exception as e:
+        print(f"Calendar error: {e}", file=sys.stderr)
+        return ""
+
+
+def fetch_reminders() -> str:
+    """Fetch active reminders."""
+    try:
+        reminders_path = os.path.join(PROJECT_DIR, "vault", "reminders.json")
+        if not os.path.exists(reminders_path):
+            return ""
+
+        data = json.loads(open(reminders_path).read())
+        if not data:
+            return ""
+
+        now = datetime.now(MOSCOW_TZ)
+        active = []
+        for r in data:
+            fire_at = datetime.fromisoformat(r["fire_at"])
+            if fire_at > now:
+                active.append(r)
+
+        if not active:
+            return ""
+
+        active.sort(key=lambda r: r["fire_at"])
+        lines = [f"=== НАПОМИНАНИЯ ({len(active)}) ===\n"]
+        for r in active:
+            fire_at = datetime.fromisoformat(r["fire_at"])
+            time_str = fire_at.strftime("%d.%m %H:%M")
+            lines.append(f"- {time_str}: {r['text']}")
+        lines.append("=== КОНЕЦ НАПОМИНАНИЙ ===")
+        return "\n".join(lines)
+    except Exception as e:
+        print(f"Reminders error: {e}", file=sys.stderr)
+        return ""
+
+
+async def fetch_tasks() -> str:
+    """Fetch tasks: done today + in progress + overdue."""
+    try:
+        from d_brain.services.notion import NotionClient
+
+        token = os.environ.get("NOTION_TOKEN", "")
+        if not token:
+            return ""
+
+        client = NotionClient(token)
+        today = date.today().isoformat()
+
+        overdue = await client.query_tasks("overdue", limit=10)
+        in_progress = await client.query_tasks("in_progress", limit=10)
+
+        # For "done today" we query all done and filter by last_edited
+        # Since query_tasks doesn't support this, we'll get recent tasks
+        all_tasks = await client.query_tasks("all", limit=30)
+
+        lines = ["=== ЗАДАЧИ (Notion) ===\n"]
+
+        # Done today — tasks with status Done (from the full list)
+        # We can't easily filter by "completed today" so skip for now
+        # Claude will figure it out from the raw data
+
+        if overdue:
+            lines.append("ПРОСРОЧЕНО:")
+            for t in overdue[:7]:
+                due = t.get("due_date", "")
+                lines.append(f"- {t['name']} (срок: {due})")
+            if len(overdue) > 7:
+                lines.append(f"  ...и ещё {len(overdue) - 7}")
+            lines.append("")
+
+        if in_progress:
+            lines.append("В РАБОТЕ:")
+            for t in in_progress[:7]:
+                due = t.get("due_date", "")
+                due_str = f" (срок: {due})" if due else ""
+                lines.append(f"- {t['name']}{due_str}")
+            if len(in_progress) > 7:
+                lines.append(f"  ...и ещё {len(in_progress) - 7}")
+            lines.append("")
+
+        # Tomorrow's tasks
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        tomorrow_tasks = await client.query_tasks("tomorrow", limit=10)
+        if tomorrow_tasks:
+            lines.append(f"ЗАДАЧИ НА ЗАВТРА ({tomorrow}):")
+            for t in tomorrow_tasks:
+                lines.append(f"- {t['name']} [{t.get('status', '')}]")
+            lines.append("")
+
+        lines.append("=== КОНЕЦ ЗАДАЧ ===")
+        return "\n".join(lines)
+    except Exception as e:
+        print(f"Notion error: {e}", file=sys.stderr)
+        return ""
+
+
+async def main() -> None:
+    calendar_data = fetch_tomorrow_calendar()
+    reminders_data = fetch_reminders()
+    tasks_data = await fetch_tasks()
+
+    sections = []
+    if tasks_data:
+        sections.append(tasks_data)
+    if calendar_data:
+        sections.append(calendar_data)
+    if reminders_data:
+        sections.append(reminders_data)
+
+    print("\n\n".join(sections))
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -1,142 +1,68 @@
 #!/usr/bin/env python3
-"""Collect all briefing data: Calendar + Gmail + Notion tasks.
+"""Утренний брифинг d-brain — формирует ГОТОВЫЙ Telegram-HTML детерминированно (без Claude).
 
-Outputs structured text to stdout for injection into Claude prompt.
+Печатает в stdout итоговое сообщение. Календарь/Gmail сейчас отключены — блоки
+показываются только при наличии данных.
 """
-
 import asyncio
 import os
-import re
 import sys
-from datetime import date, timedelta, timezone
+from datetime import date
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(PROJECT_DIR, "src"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # для report_fmt
 
-MOSCOW_TZ = timezone(timedelta(hours=3))
-
-
-def fetch_calendar() -> str:
-    """Fetch today's calendar events."""
-    try:
-        from d_brain.services.calendar import CalendarClient
-
-        creds = os.path.join(PROJECT_DIR, "gcp-oauth.keys.json")
-        token = os.path.join(PROJECT_DIR, "calendar-token.json")
-        client = CalendarClient(creds, token)
-
-        if not client.enabled:
-            return ""
-
-        events = client.fetch_all_calendars_events(days=1, max_results=20)
-        return client.format_for_briefing(events)
-    except Exception as e:
-        print(f"Calendar error: {e}", file=sys.stderr)
-        return ""
+from report_fmt import esc, clean_name, fmt_due  # noqa: E402
 
 
-def fetch_gmail() -> str:
-    """Fetch unread emails."""
-    try:
-        from d_brain.services.gmail import GmailClient
+async def fetch_tasks() -> dict:
+    from d_brain.services.notion import NotionClient
 
-        creds = os.path.join(PROJECT_DIR, "gcp-oauth.keys.json")
-        token = os.path.join(PROJECT_DIR, "gmail-token.json")
-        client = GmailClient(creds, token)
-
-        if not client.enabled:
-            return ""
-
-        emails = client.fetch_emails(hours=24, unread_only=True, max_results=15)
-        if emails:
-            return client.format_for_claude(emails)
-        return "Новых писем нет."
-    except Exception as e:
-        print(f"Gmail error: {e}", file=sys.stderr)
-        return ""
-
-
-async def fetch_tasks() -> str:
-    """Fetch tasks from Notion: overdue + today + in progress."""
-    try:
-        from d_brain.services.notion import NotionClient
-
-        token = os.environ.get("NOTION_TOKEN", "")
-        if not token:
-            return ""
-
-        client = NotionClient(token)
-        today = date.today().isoformat()
-
-        overdue = await client.query_tasks("overdue", limit=20)
-        today_tasks = await client.query_tasks("today", limit=30)
-        in_progress = await client.query_tasks("in_progress", limit=10)
-        daily = await client.query_tasks("daily", limit=15)
-
-        lines = [f"=== ЗАДАЧИ (Notion) ===\n"]
-
-        if daily:
-            lines.append("ЕЖЕДНЕВНЫЕ ПРИВЫЧКИ:")
-            for t in daily:
-                # strip the "<emoji> [label] " prefix the sync embeds in the title
-                clean = re.sub(r"^[^\[]*\[[^\]]*\]\s*", "", t["name"]).strip()
-                lines.append(f"- {clean or t['name']}")
-            lines.append("")
-
-        if overdue:
-            lines.append("ПРОСРОЧЕНО:")
-            for t in overdue:
-                due = t.get("due_date", "")
-                lines.append(f"- {t['name']} (срок: {due})")
-            lines.append("")
-
-        if today_tasks:
-            lines.append(f"НА СЕГОДНЯ ({today}):")
-            for t in today_tasks:
-                lines.append(f"- {t['name']} [{t.get('status', '')}]")
-            lines.append("")
-
-        if in_progress:
-            lines.append("В РАБОТЕ:")
-            for t in in_progress:
-                due = t.get("due_date", "")
-                due_str = f" (срок: {due})" if due else ""
-                lines.append(f"- {t['name']}{due_str}")
-            lines.append("")
-
-        if not overdue and not today_tasks and not in_progress:
-            # Fallback: show not started
-            not_started = await client.query_tasks("all", limit=5)
-            if not_started:
-                lines.append("БЛИЖАЙШИЕ ЗАДАЧИ:")
-                for t in not_started[:5]:
-                    due = t.get("due_date", "")
-                    due_str = f" (срок: {due})" if due else ""
-                    lines.append(f"- {t['name']}{due_str}")
-                lines.append("")
-
-        lines.append("=== КОНЕЦ ЗАДАЧ ===")
-        return "\n".join(lines)
-    except Exception as e:
-        print(f"Notion error: {e}", file=sys.stderr)
-        return ""
+    token = os.environ.get("NOTION_TOKEN", "")
+    if not token:
+        return {}
+    c = NotionClient(token)
+    return {
+        "overdue": await c.query_tasks("overdue", limit=20),
+        "today": await c.query_tasks("today", limit=30),
+        "daily": await c.query_tasks("daily", limit=15),
+    }
 
 
 async def main() -> None:
-    # Run calendar and gmail sync, tasks async
-    calendar_data = fetch_calendar()
-    gmail_data = fetch_gmail()
-    tasks_data = await fetch_tasks()
+    today = date.today().strftime("%d.%m.%Y")
+    try:
+        d = await fetch_tasks()
+    except Exception as e:
+        print(f"Notion error: {e}", file=sys.stderr)
+        d = {}
 
-    sections = []
-    if calendar_data:
-        sections.append(calendar_data)
-    if tasks_data:
-        sections.append(tasks_data)
-    if gmail_data:
-        sections.append(gmail_data)
+    overdue = d.get("overdue", [])
+    today_tasks = d.get("today", [])
+    daily = d.get("daily", [])
 
-    print("\n\n".join(sections))
+    P = [f"🌅 <b>Доброе утро! {today}</b>"]
+
+    if overdue:
+        P.append(f"\n🔴 <b>Просрочено ({len(overdue)}):</b>")
+        for t in overdue:
+            P.append(f"• {esc(clean_name(t['name']))} <i>— до {fmt_due(t.get('due_date', ''))}</i>")
+
+    if today_tasks:
+        P.append(f"\n✅ <b>На сегодня ({len(today_tasks)}):</b>")
+        for t in today_tasks:
+            P.append(f"• {esc(clean_name(t['name']))}")
+
+    if daily:
+        P.append("\n🔁 <b>Ежедневно:</b>")
+        for t in daily:
+            P.append(f"• {esc(clean_name(t['name']))}")
+
+    if not (overdue or today_tasks):
+        P.append("\nЗадач на сегодня нет — можно выдохнуть 🎉")
+
+    print("\n".join(P))
 
 
 if __name__ == "__main__":

@@ -85,7 +85,6 @@ class NotionClient:
         query_type: str = "all",
         limit: int = 50,
         project: str | None = None,
-        fetch_all: bool = False,
     ) -> list[dict]:
         """Query tasks from the database.
 
@@ -111,8 +110,6 @@ class NotionClient:
             filters = {"property": "Срок выполнения", "date": {"equals": tomorrow}}
         elif query_type == "in_progress":
             filters = {"property": "Status", "status": {"equals": "In progress"}}
-        elif query_type == "done":
-            filters = {"property": "Status", "status": {"equals": "Done"}}
         elif query_type == "daily":
             # Habits from the mind map branch "🔁 Ежедневно" — synced with that label in the title
             filters = {
@@ -132,30 +129,25 @@ class NotionClient:
             else:
                 filters = project_filter
 
-        results: list[dict] = []
-        cursor: str | None = None
-        async with httpx.AsyncClient(timeout=15) as client:
-            while True:
-                payload: dict = {
-                    "filter": filters,
-                    "sorts": [{"property": "Срок выполнения", "direction": "ascending"}],
-                    "page_size": 100 if fetch_all else limit,
-                }
-                if cursor:
-                    payload["start_cursor"] = cursor
-                resp = await client.post(
-                    f"{NOTION_API_URL}/databases/{TASKS_DB_ID}/query",
-                    headers=self._headers,
-                    json=payload,
-                )
-                if resp.status_code != 200:
-                    raise RuntimeError(f"Notion API вернул {resp.status_code}: {resp.text[:200]}")
-                data = resp.json()
-                results.extend(data.get("results", []))
-                self._last_has_more = data.get("has_more", False)
-                cursor = data.get("next_cursor")
-                if not fetch_all or not self._last_has_more or not cursor:
-                    break
+        payload: dict = {
+            "filter": filters,
+            "sorts": [{"property": "Срок выполнения", "direction": "ascending"}],
+            "page_size": limit,
+        }
+
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(
+                f"{NOTION_API_URL}/databases/{TASKS_DB_ID}/query",
+                headers=self._headers,
+                json=payload,
+            )
+
+        if resp.status_code != 200:
+            raise RuntimeError(f"Notion API вернул {resp.status_code}: {resp.text[:200]}")
+
+        data = resp.json()
+        results = data.get("results", [])
+        self._last_has_more = data.get("has_more", False)
         tasks = []
         for page in results:
             props = page.get("properties", {})
@@ -173,7 +165,7 @@ class NotionClient:
             due_date = ""
             if due_prop and due_prop.get("date"):
                 due_date = due_prop["date"].get("start", "")
-            tasks.append({"id": page.get("id", ""), "name": name, "status": status, "due_date": due_date})
+            tasks.append({"name": name, "status": status, "due_date": due_date})
         return tasks
 
 
