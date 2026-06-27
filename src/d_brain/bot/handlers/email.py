@@ -8,6 +8,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
+from d_brain.services.anko_mail import AnkoMailClient
 from d_brain.services.gmail import GmailClient
 from d_brain.services.processor import ClaudeProcessor
 
@@ -15,21 +16,38 @@ router = Router(name="email")
 logger = logging.getLogger(__name__)
 
 
+def _read_client(settings: Settings) -> AnkoMailClient | GmailClient | None:
+    """Pick the mail client for reading.
+
+    Prefers the anko.team IMAP mailbox; falls back to Gmail if that
+    is the only one configured. Returns None when neither is set up.
+    """
+    if settings.anko_mail_enabled:
+        return AnkoMailClient(
+            settings.anko_imap_host,
+            settings.anko_imap_port,
+            settings.anko_imap_user,
+            settings.anko_imap_password,
+        )
+    if settings.gmail_enabled:
+        return GmailClient(settings.gmail_credentials_path, settings.gmail_token_path)
+    return None
+
+
 @router.message(Command("email"))
 async def cmd_email(message: Message, settings: Settings) -> None:
-    """Handle /email command — fetch and analyze Gmail."""
+    """Handle /email command — fetch and analyze incoming mail."""
     await check_email_intent(message, settings)
 
 
 async def check_email_intent(message: Message, settings: Settings) -> None:
     """Shared logic for /email command, button, and voice/text intent."""
-    if not settings.gmail_enabled:
-        await message.answer("📧 Gmail не настроен. Запусти OAuth: <code>python -m d_brain.services.gmail --setup</code>")
+    client = _read_client(settings)
+    if client is None:
+        await message.answer("📧 Почта не настроена.")
         return
 
     status_msg = await message.answer("📧 Загружаю почту...")
-
-    client = GmailClient(settings.gmail_credentials_path, settings.gmail_token_path)
 
     try:
         emails = client.fetch_emails(hours=24, unread_only=True, max_results=20)

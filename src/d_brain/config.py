@@ -42,11 +42,32 @@ class Settings(BaseSettings):
         default="calendar-token.json",
         description="Path to Google Calendar OAuth token file",
     )
+    anko_imap_host: str = Field(
+        default="mail.hosting.reg.ru",
+        description="IMAP host for daria@anko.team (reg.ru)",
+    )
+    anko_imap_port: int = Field(
+        default=993,
+        description="IMAP SSL port",
+    )
+    anko_imap_user: str = Field(
+        default="",
+        description="IMAP username (full email address)",
+    )
+    anko_imap_password: str = Field(
+        default="",
+        description="IMAP mailbox password",
+    )
 
     @property
     def calendar_enabled(self) -> bool:
         """Check if Calendar token file exists."""
         return Path(self.calendar_token_path).exists()
+
+    @property
+    def anko_mail_enabled(self) -> bool:
+        """Check if anko.team IMAP credentials are configured."""
+        return bool(self.anko_imap_host and self.anko_imap_user and self.anko_imap_password)
 
     @property
     def gmail_enabled(self) -> bool:
