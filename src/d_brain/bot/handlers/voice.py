@@ -1,6 +1,7 @@
 """Voice message handler."""
 
 import logging
+import re
 from datetime import datetime
 
 from aiogram import Bot, Router
@@ -8,7 +9,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, classify_query, extract_completion_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
+from d_brain.services.intent import Intent, classify, classify_query, extract_completion_query, extract_deadline_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
 from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
@@ -77,6 +78,9 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
 
         elif intent == Intent.COMPLETE_TASK:
             await _handle_complete_task(message, transcript, timestamp, storage, session, user_id, settings)
+
+        elif intent == Intent.MOVE_DEADLINE:
+            await _handle_move_deadline(message, transcript, timestamp, storage, session, user_id, settings)
 
         elif intent == Intent.CREATE_EVENT:
             from d_brain.bot.handlers.calendar import create_event_intent
@@ -226,6 +230,48 @@ async def _handle_complete_task(
     storage.append_to_daily(transcript, timestamp, "[voice][complete]")
     session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
     logger.info("Complete-task from voice: %r → %s", search, result.get("matched"))
+
+
+async def _handle_move_deadline(
+    message: Message,
+    transcript: str,
+    timestamp: datetime,
+    storage: VaultStorage,
+    session: SessionStore,
+    user_id: int,
+    settings: Settings,
+) -> None:
+    """Fast path: move a task's deadline directly via Notion API.
+
+    Falls back to Claude for bulk phrasing ("перенеси все просроченные ...")
+    or when no single task matches well.
+    """
+    new_date = extract_due_date(transcript)
+    bulk = bool(re.search(r"\b(все|всё|просроч)\w*", transcript.lower()))
+
+    if new_date and not bulk:
+        search = extract_deadline_query(transcript)
+        try:
+            client = NotionClient(settings.notion_token)
+            result = await client.update_deadline(search, new_date)
+        except Exception as e:
+            logger.exception("Failed to move deadline from voice")
+            await message.answer(f"🎤 <i>{transcript}</i>\n\n❌ Не удалось перенести: {e}")
+            return
+
+        if result.get("matched"):
+            await message.answer(
+                f"🎤 <i>{transcript}</i>\n\n"
+                f"📅 Срок перенесён: <b>{result['matched']}</b> → <b>{new_date}</b>"
+            )
+            storage.append_to_daily(transcript, timestamp, "[voice][deadline]")
+            session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
+            logger.info("Deadline moved from voice: %r → %s", search, new_date)
+            return
+        # no good match → fall through to Claude
+
+    # Bulk op, no parseable date, or no match — let Claude handle it.
+    await _handle_notion_action(message, transcript, timestamp, storage, session, user_id, settings)
 
 
 async def _handle_notion_action(

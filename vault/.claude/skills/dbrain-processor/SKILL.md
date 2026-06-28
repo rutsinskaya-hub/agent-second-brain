@@ -69,6 +69,7 @@ Re-creating those here makes DUPLICATE tasks — this is the #1 bug to avoid.
 SKIP entirely — already done, do NOT create or update anything for:
 - `[voice][task]`, `[text][task]` — task already created in Notion
 - `[voice][complete]`, `[text][complete]` — task already marked Done
+- `[voice][deadline]`, `[text][deadline]` — task deadline already moved
 - `[voice][reminder]`, `[text][reminder]` — reminder already set
 - `[voice][query]`, `[text][query]` — was a read, nothing to create
 - any `[*][calendar]`, `[*][calendar-create]`, `[*][email]`, `[*][email-manage]`, `[*][action]`

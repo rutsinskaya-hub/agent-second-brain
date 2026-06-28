@@ -145,6 +145,39 @@ class NotionClient:
         logger.info("Task completed: %s (score %.2f)", best["name"], best_score)
         return {"matched": best["name"], "due_date": best.get("due_date", "")}
 
+    async def update_deadline(self, search: str, new_date: str) -> dict:
+        """Move the open task best matching *search* to *new_date* (ISO).
+
+        Same fuzzy-matching as complete_task. Returns:
+            {"matched": <title>, "due_date": <new_date>}            on success
+            {"matched": None, "candidates": [<title>, ...]}        if no good match
+        """
+        tasks = await self.query_tasks("all", fetch_all=True)
+        if not tasks:
+            return {"matched": None, "candidates": []}
+
+        q = _norm(search)
+        scored = sorted(
+            tasks, key=lambda t: _similarity(q, _norm(t["name"])), reverse=True
+        )
+        best = scored[0]
+        if _similarity(q, _norm(best["name"])) < 0.5:
+            return {"matched": None, "candidates": [t["name"] for t in scored[:3]]}
+
+        payload = {"properties": {"Срок выполнения": {"date": {"start": new_date}}}}
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.patch(
+                f"{NOTION_API_URL}/pages/{best['id']}",
+                headers=self._headers,
+                json=payload,
+            )
+        if resp.status_code != 200:
+            logger.error("Notion patch error %s: %s", resp.status_code, resp.text)
+            raise RuntimeError(f"Notion API вернул {resp.status_code}: {resp.text[:200]}")
+
+        logger.info("Deadline moved: %s → %s", best["name"], new_date)
+        return {"matched": best["name"], "due_date": new_date}
+
     async def query_tasks(
         self,
         query_type: str = "all",

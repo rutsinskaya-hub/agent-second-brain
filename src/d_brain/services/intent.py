@@ -17,6 +17,7 @@ class Intent(Enum):
     CREATE_TASK = "create_task"
     QUERY_TASKS = "query_tasks"    # Fast: read from Notion API directly
     COMPLETE_TASK = "complete_task"  # Fast: mark Done via Notion API directly
+    MOVE_DEADLINE = "move_deadline"  # Fast: change due date via Notion API directly
     NOTION_ACTION = "notion_action"  # Slow: update/write via Claude + MCP
     CHECK_EMAIL = "check_email"    # Fetch & analyze Gmail
     MANAGE_EMAIL = "manage_email"  # Delete/trash emails
@@ -144,7 +145,7 @@ def classify(text: str) -> Intent:
             return Intent.COMPLETE_TASK
     for pattern in _ACTION_PATTERNS:
         if re.search(pattern, t):
-            return Intent.NOTION_ACTION
+            return Intent.MOVE_DEADLINE
     for pattern in _CREATE_PATTERNS:
         if re.search(pattern, t):
             return Intent.CREATE_TASK
@@ -247,6 +248,31 @@ _COMPLETE_STRIP = re.compile(
 def extract_completion_query(text: str) -> str:
     """Strip 'mark done' command words, leaving the task identifier phrase."""
     t = _COMPLETE_STRIP.sub(" ", text.lower())
+    return re.sub(r"\s+", " ", t).strip()
+
+
+# Words to drop from a "move deadline" phrase, leaving the task identifier.
+# The date itself is removed separately (it is parsed by extract_due_date).
+_DEADLINE_STRIP = re.compile(
+    r"\b("
+    r"перенес\w*|передвин\w*|сдвин\w*|отлож\w*|перекин\w*|перекинь|"
+    r"измен\w*|обнов\w*|поменя\w*|поставь|"
+    r"дедлайн\w*|срок\w*|дат[уае]?|"
+    r"задач[уаеи]?|таск\w*|это|её|ее|"
+    r"сегодня|завтра|послезавтра|на\s+"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def extract_deadline_query(text: str) -> str:
+    """Strip move-deadline command words and the date, leaving the task phrase."""
+    t = text.lower()
+    # Remove the date token first (dd.mm, "5 июля", weekday, today/tomorrow)
+    t = _MONTH_DATE_RE.sub(" ", t)
+    t = _DATE_RE.sub(" ", t)
+    t = _WEEKDAY_RE.sub(" ", t)
+    t = _DEADLINE_STRIP.sub(" ", t)
     return re.sub(r"\s+", " ", t).strip()
 
 
@@ -362,6 +388,18 @@ def extract_query_project(text: str) -> str | None:
 _TODAY_RE = re.compile(r"\bсегодня\b", re.IGNORECASE)
 _TOMORROW_RE = re.compile(r"\bзавтра\b", re.IGNORECASE)
 _DATE_RE = re.compile(r"\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b")
+
+# "1 июля", "3-е июля", "25 декабря" — number + Russian month name (any case form)
+_MONTHS = {
+    "январ": 1, "феврал": 2, "март": 3, "апрел": 4, "ма": 5, "июн": 6,
+    "июл": 7, "август": 8, "сентябр": 9, "октябр": 10, "ноябр": 11, "декабр": 12,
+}
+_MONTH_DATE_RE = re.compile(
+    r"\b(\d{1,2})\s*(?:-?[еого]{1,2})?\s+"
+    r"(январ\w*|феврал\w*|март\w*|апрел\w*|ма[йя]|июн\w*|июл\w*|август\w*|"
+    r"сентябр\w*|октябр\w*|ноябр\w*|декабр\w*)\b",
+    re.IGNORECASE,
+)
 _WEEKDAY_RE = re.compile(
     r"\b(понедельник|вторник|среду?|четверг|пятницу?|субботу?|воскресенье)\b",
     re.IGNORECASE,
@@ -404,5 +442,21 @@ def extract_due_date(text: str) -> str | None:
             return date(year, month, day).isoformat()
         except ValueError:
             pass
+
+    m3 = _MONTH_DATE_RE.search(text)
+    if m3:
+        day = int(m3.group(1))
+        month_word = m3.group(2).lower()
+        month = next((num for stem, num in _MONTHS.items() if month_word.startswith(stem)), None)
+        if month:
+            year = today.year
+            try:
+                d = date(year, month, day)
+                # If that date already passed this year, assume next year
+                if d < today:
+                    d = date(year + 1, month, day)
+                return d.isoformat()
+            except ValueError:
+                pass
 
     return None

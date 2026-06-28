@@ -1,6 +1,7 @@
 """Text message handler."""
 
 import logging
+import re
 from datetime import datetime
 
 from aiogram import Bot, Router
@@ -8,7 +9,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, classify_query, extract_completion_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
+from d_brain.services.intent import Intent, classify, classify_query, extract_completion_query, extract_deadline_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
 from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
@@ -127,6 +128,31 @@ async def handle_text(message: Message, bot: Bot, settings: Settings) -> None:
         await check_email_intent(message, settings)
         storage.append_to_daily(text, timestamp, "[text][email]")
         session.append(user_id, "text", text=text, msg_id=message.message_id)
+
+    elif intent == Intent.MOVE_DEADLINE:
+        new_date = extract_due_date(text)
+        bulk = bool(re.search(r"\b(все|всё|просроч)\w*", text.lower()))
+        handled = False
+        if new_date and not bulk:
+            try:
+                client = NotionClient(settings.notion_token)
+                result = await client.update_deadline(extract_deadline_query(text), new_date)
+            except Exception as e:
+                logger.exception("Failed to move deadline from text")
+                await message.answer(f"❌ Не удалось перенести: {e}")
+                return
+            if result.get("matched"):
+                await message.answer(
+                    f"📅 Срок перенесён: <b>{result['matched']}</b> → <b>{new_date}</b>"
+                )
+                storage.append_to_daily(text, timestamp, "[text][deadline]")
+                session.append(user_id, "text", text=text, msg_id=message.message_id)
+                handled = True
+        if not handled:
+            from d_brain.bot.handlers.do import process_request_streaming
+            await process_request_streaming(message, text, settings)
+            storage.append_to_daily(text, timestamp, "[text][action]")
+            session.append(user_id, "text", text=text, msg_id=message.message_id)
 
     elif intent == Intent.NOTION_ACTION:
         from d_brain.bot.handlers.do import process_request_streaming
