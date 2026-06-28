@@ -33,3 +33,12 @@ telethon.session
 
 # Secrets — MCP server config (Trello/Notion/Google keys)
 mcp-config.json
+
+# Bot runtime data — mutated live by the bot, must NEVER be tracked (added 2026-06-28)
+vault/daily/*.md
+vault/.sessions/
+vault/reminders.json
+vault/topics.json
+vault/attachments/*
+!vault/daily/.gitkeep
+!vault/attachments/.gitkeep
