@@ -54,11 +54,31 @@ Task properties:
 ## Processing Flow
 
 1. Read daily — `daily/YYYY-MM-DD.md`
-2. Classify each entry — task or thought
+2. Classify each entry — but FIRST apply the skip rule below; only raw entries proceed
 3. Tasks → create/update in Notion (status, срок, проект — всё через tool)
 4. Thoughts → save to `thoughts/` with [[wiki-links]]
 5. Log actions back to `daily/YYYY-MM-DD.md`
 6. Generate the HTML report
+
+### CRITICAL: Skip already-handled entries (NO DUPLICATES)
+
+Each daily entry header carries a type tag in brackets. The bot ACTIONS many
+intents instantly at capture time (the fast path) and logs them with a sub-tag.
+Re-creating those here makes DUPLICATE tasks — this is the #1 bug to avoid.
+
+SKIP entirely — already done, do NOT create or update anything for:
+- `[voice][task]`, `[text][task]` — task already created in Notion
+- `[voice][complete]`, `[text][complete]` — task already marked Done
+- `[voice][reminder]`, `[text][reminder]` — reminder already set
+- `[voice][query]`, `[text][query]` — was a read, nothing to create
+- any `[*][calendar]`, `[*][calendar-create]`, `[*][email]`, `[*][email-manage]`, `[*][action]`
+
+PROCESS (classify → task or thought) ONLY raw, unrouted entries:
+- `[voice]`, `[text]`, `[photo]`, `[note]`, `[forward from: ...]`
+
+Before creating ANY task, also query Notion (`API-post-database-query`) for a task
+with a similar title — match loosely, a short spoken phrase vs. a longer stored
+title still counts. If one exists, UPDATE it instead of creating a duplicate.
 
 ## Classification
 

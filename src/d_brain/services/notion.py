@@ -3,11 +3,33 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import date
+from difflib import SequenceMatcher
 
 import httpx
 
 logger = logging.getLogger(__name__)
+
+
+def _norm(s: str) -> str:
+    """Lowercase, drop punctuation, collapse whitespace — for fuzzy matching."""
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", s.lower())).strip()
+
+
+def _similarity(query: str, candidate: str) -> float:
+    """Score how well *query* identifies *candidate* (both pre-normalized).
+
+    Combines a whole-string ratio with content-word coverage: the fraction of
+    the query's significant words (>3 chars) that appear in the candidate. The
+    coverage term makes "разобраться доменами reg" match the full title
+    "Разобраться со всеми доменами и хостингами на reg.ru" even though the
+    spoken phrase is much shorter than the stored task name.
+    """
+    ratio = SequenceMatcher(None, query, candidate).ratio()
+    tokens = [w for w in query.split() if len(w) > 3]
+    coverage = (sum(1 for w in tokens if w in candidate) / len(tokens)) if tokens else 0.0
+    return max(ratio, coverage)
 
 NOTION_API_URL = "https://api.notion.com/v1"
 NOTION_VERSION = "2022-06-28"
@@ -79,6 +101,49 @@ class NotionClient:
 
         data = resp.json()
         return data.get("url", "")
+
+    async def _set_status(self, page_id: str, status_name: str) -> None:
+        """Patch a task's Status (a Notion *status*-type property)."""
+        payload = {"properties": {"Status": {"status": {"name": status_name}}}}
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.patch(
+                f"{NOTION_API_URL}/pages/{page_id}",
+                headers=self._headers,
+                json=payload,
+            )
+        if resp.status_code != 200:
+            logger.error("Notion patch error %s: %s", resp.status_code, resp.text)
+            raise RuntimeError(f"Notion API вернул {resp.status_code}: {resp.text[:200]}")
+
+    async def complete_task(self, search: str) -> dict:
+        """Mark the open task best matching *search* as Done.
+
+        Matches against real task titles (not the spoken phrasing), so it is
+        robust to how the command was worded. Done directly via the API — the
+        Status property is a `status` type and needs {"status": {"name": ...}},
+        which the Claude+MCP path failed to set (cause of "completion ignored").
+
+        Returns:
+            {"matched": <title>, "due_date": <iso>}                on success
+            {"matched": None, "candidates": [<title>, ...]}        if no good match
+        """
+        tasks = await self.query_tasks("all", fetch_all=True)  # open tasks (excludes Done)
+        if not tasks:
+            return {"matched": None, "candidates": []}
+
+        q = _norm(search)
+        scored = sorted(
+            tasks, key=lambda t: _similarity(q, _norm(t["name"])), reverse=True
+        )
+        best = scored[0]
+        best_score = _similarity(q, _norm(best["name"]))
+
+        if best_score < 0.5:
+            return {"matched": None, "candidates": [t["name"] for t in scored[:3]]}
+
+        await self._set_status(best["id"], "Done")
+        logger.info("Task completed: %s (score %.2f)", best["name"], best_score)
+        return {"matched": best["name"], "due_date": best.get("due_date", "")}
 
     async def query_tasks(
         self,

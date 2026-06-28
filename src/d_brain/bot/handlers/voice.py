@@ -8,7 +8,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
+from d_brain.services.intent import Intent, classify, classify_query, extract_completion_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
 from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
@@ -74,6 +74,9 @@ async def handle_voice(message: Message, bot: Bot, settings: Settings) -> None:
 
         elif intent == Intent.QUERY_TASKS:
             await _handle_query_tasks(message, transcript, timestamp, storage, session, user_id, settings)
+
+        elif intent == Intent.COMPLETE_TASK:
+            await _handle_complete_task(message, transcript, timestamp, storage, session, user_id, settings)
 
         elif intent == Intent.CREATE_EVENT:
             from d_brain.bot.handlers.calendar import create_event_intent
@@ -184,6 +187,45 @@ async def _handle_query_tasks(
     await message.answer(f"🎤 <i>{transcript}</i>\n\n{reply}")
     storage.append_to_daily(transcript, timestamp, "[voice][query]")
     session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
+
+
+async def _handle_complete_task(
+    message: Message,
+    transcript: str,
+    timestamp: datetime,
+    storage: VaultStorage,
+    session: SessionStore,
+    user_id: int,
+    settings: Settings,
+) -> None:
+    """Fast path: mark a task Done directly via Notion API."""
+    search = extract_completion_query(transcript)
+
+    try:
+        client = NotionClient(settings.notion_token)
+        result = await client.complete_task(search)
+    except Exception as e:
+        logger.exception("Failed to complete Notion task from voice")
+        await message.answer(f"🎤 <i>{transcript}</i>\n\n❌ Не удалось закрыть задачу: {e}")
+        return
+
+    if result.get("matched"):
+        due = f" <i>({result['due_date']})</i>" if result.get("due_date") else ""
+        await message.answer(
+            f"🎤 <i>{transcript}</i>\n\n"
+            f"✅ Выполнено: <b>{result['matched']}</b>{due}"
+        )
+    else:
+        cands = result.get("candidates") or []
+        hint = ("\n\nБлижайшие:\n" + "\n".join(f"• {c}" for c in cands)) if cands else ""
+        await message.answer(
+            f"🎤 <i>{transcript}</i>\n\n"
+            f"❓ Не нашла подходящую открытую задачу.{hint}"
+        )
+
+    storage.append_to_daily(transcript, timestamp, "[voice][complete]")
+    session.append(user_id, "voice", text=transcript, msg_id=message.message_id)
+    logger.info("Complete-task from voice: %r → %s", search, result.get("matched"))
 
 
 async def _handle_notion_action(

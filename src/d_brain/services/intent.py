@@ -16,6 +16,7 @@ from enum import Enum
 class Intent(Enum):
     CREATE_TASK = "create_task"
     QUERY_TASKS = "query_tasks"    # Fast: read from Notion API directly
+    COMPLETE_TASK = "complete_task"  # Fast: mark Done via Notion API directly
     NOTION_ACTION = "notion_action"  # Slow: update/write via Claude + MCP
     CHECK_EMAIL = "check_email"    # Fetch & analyze Gmail
     MANAGE_EMAIL = "manage_email"  # Delete/trash emails
@@ -65,16 +66,21 @@ _QUERY_PATTERNS = [
     r"\bчто\s+в\s+\w+\b.{0,10}$",               # "что в мероприятиях" (короткая фраза)
 ]
 
-_ACTION_PATTERNS = [
-    # Mark done — verb stems cover imperative/infinitive/synonyms
+# Mark done — verb stems cover imperative/infinitive/synonyms.
+# Handled by the fast direct-API path (COMPLETE_TASK), not Claude+MCP.
+_COMPLETE_PATTERNS = [
     r"\b(отмет\w*|помет\w*|закр\w*|заверш\w*|выполн\w*|законч\w*|поставь)\s+.{0,40}(выполнен|готов|сделан|закрыт|done)",
     r"\b(закр\w*|заверш\w*|выполн\w*|законч\w*)\s+.{0,40}(задач|таск)",
     r"\b(выполнил[аи]?|сделал[аи]?|закрыл[аи]?|законч\w*)\s+(задачу|это|её|таск\w*)\b",
     r"\bзадач[уа]\s+.{0,40}\s*(выполнен|готов|сделан|закрыт)",
     r"\bзадача\s+.{0,40}\s+(выполнена|готова|сделана|закрыта)\b",
     r"\b(галочк\w*|чекбокс)\s+.{0,30}задач",
-    # Update deadline — match verb stems so infinitive/imperative both hit
-    # ("перенеси"/"перенести"/"перенесите", "сдвинь"/"сдвинуть", "отложи", ...)
+]
+
+# Update deadline — still delegated to Claude+MCP (NOTION_ACTION).
+# Verb stems so infinitive/imperative both hit
+# ("перенеси"/"перенести"/"перенесите", "сдвинь"/"сдвинуть", "отложи", ...)
+_ACTION_PATTERNS = [
     r"\b(перенес\w*|передвин\w*|сдвин\w*|отлож\w*|перекин\w*)\s+.{0,60}\bна\s+",
     r"\b(измен\w*|обнов\w*|сдвин\w*|поменя\w*|поставь)\s+.{0,20}(дедлайн|срок|дат\w*)\b",
     r"\b(дедлайн|срок)\s+.{0,30}(перенес\w*|передвин\w*|сдвин\w*|измен\w*|поменя\w*)",
@@ -133,6 +139,9 @@ def classify(text: str) -> Intent:
     # Mark-done / update actions must win over CREATE: the create patterns are
     # greedy ("задачу <word>" matches any sentence mentioning a task), so an
     # action like "пометь сделанным задачу X" would otherwise be misread as new.
+    for pattern in _COMPLETE_PATTERNS:
+        if re.search(pattern, t):
+            return Intent.COMPLETE_TASK
     for pattern in _ACTION_PATTERNS:
         if re.search(pattern, t):
             return Intent.NOTION_ACTION
@@ -219,6 +228,26 @@ def extract_task_name(text: str) -> str:
     t = _TRIGGER_PREFIX.sub("", t)
     t = _TASK_PREFIX.sub("", t)
     return t.strip()
+
+
+# Command words to drop from a "mark done" phrase, leaving only the words that
+# identify *which* task. The leftover is fuzzy-matched against real task titles,
+# so this need not be exhaustive — just remove the obvious command noise.
+_COMPLETE_STRIP = re.compile(
+    r"\b("
+    r"помет\w*|отмет\w*|закр\w*|заверш\w*|выполн\w*|законч\w*|сделал[аи]?|"
+    r"поставь|галочк\w*|чекбокс|"
+    r"задач[уаеи]?|таск\w*|это|её|ее|как|"
+    r"готов\w*|сделан\w*|закрыт\w*|done"
+    r")\b",
+    re.IGNORECASE,
+)
+
+
+def extract_completion_query(text: str) -> str:
+    """Strip 'mark done' command words, leaving the task identifier phrase."""
+    t = _COMPLETE_STRIP.sub(" ", text.lower())
+    return re.sub(r"\s+", " ", t).strip()
 
 
 # ── Project extraction ──────────────────────────────────────────────────────

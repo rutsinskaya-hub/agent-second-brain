@@ -8,7 +8,7 @@ from aiogram.types import Message
 
 from d_brain.bot.utils import run_with_progress
 from d_brain.config import Settings
-from d_brain.services.intent import Intent, classify, classify_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
+from d_brain.services.intent import Intent, classify, classify_query, extract_completion_query, extract_due_date, extract_project, extract_query_project, extract_task_name, has_command_smell
 from d_brain.services.notion import NotionClient, _format_tasks_reply
 from d_brain.services.processor import ClaudeProcessor
 from d_brain.services.session import SessionStore
@@ -82,6 +82,26 @@ async def handle_text(message: Message, bot: Bot, settings: Settings) -> None:
             return
         await message.answer(_format_tasks_reply(tasks, query_type.value, project=project))
         storage.append_to_daily(text, timestamp, "[text][query]")
+        session.append(user_id, "text", text=text, msg_id=message.message_id)
+
+    elif intent == Intent.COMPLETE_TASK:
+        search = extract_completion_query(text)
+        try:
+            client = NotionClient(settings.notion_token)
+            result = await client.complete_task(search)
+        except Exception as e:
+            logger.exception("Failed to complete Notion task from text")
+            await message.answer(f"❌ Не удалось закрыть задачу: {e}")
+            return
+
+        if result.get("matched"):
+            due = f" <i>({result['due_date']})</i>" if result.get("due_date") else ""
+            await message.answer(f"✅ Выполнено: <b>{result['matched']}</b>{due}")
+        else:
+            cands = result.get("candidates") or []
+            hint = ("\n\nБлижайшие:\n" + "\n".join(f"• {c}" for c in cands)) if cands else ""
+            await message.answer(f"❓ Не нашла подходящую открытую задачу.{hint}")
+        storage.append_to_daily(text, timestamp, "[text][complete]")
         session.append(user_id, "text", text=text, msg_id=message.message_id)
 
     elif intent == Intent.CREATE_EVENT:
