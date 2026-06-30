@@ -13,7 +13,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(PROJECT_DIR, "src"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # для report_fmt
 
-from report_fmt import esc, clean_name, fmt_due  # noqa: E402
+from report_fmt import esc, clean_name, fmt_due, task_html  # noqa: E402
 
 
 async def fetch_tasks() -> dict:
@@ -47,12 +47,12 @@ async def main() -> None:
     if overdue:
         P.append(f"\n🔴 <b>Просрочено ({len(overdue)}):</b>")
         for t in overdue:
-            P.append(f"• {esc(clean_name(t['name']))} <i>— до {fmt_due(t.get('due_date', ''))}</i>")
+            P.append(f"• {task_html(t['name'])} <i>— до {fmt_due(t.get('due_date', ''))}</i>")
 
     if today_tasks:
         P.append(f"\n✅ <b>На сегодня ({len(today_tasks)}):</b>")
         for t in today_tasks:
-            P.append(f"• {esc(clean_name(t['name']))}")
+            P.append(f"• {task_html(t['name'])}")
 
     if daily:
         P.append("\n🔁 <b>Ежедневно:</b>")

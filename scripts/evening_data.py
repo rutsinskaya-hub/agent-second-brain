@@ -14,7 +14,7 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(PROJECT_DIR, "src"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # для report_fmt
 
-from report_fmt import esc, clean_name, fmt_due  # noqa: E402
+from report_fmt import esc, clean_name, fmt_due, task_html  # noqa: E402
 
 MOSCOW_TZ = timezone(timedelta(hours=3))
 
@@ -87,7 +87,7 @@ async def main() -> None:
     if overdue:
         P.append(f"\n🔴 <b>Просрочено ({len(overdue)}):</b>")
         for t in overdue:
-            P.append(f"• {esc(clean_name(t['name']))} <i>— до {fmt_due(t.get('due_date', ''))}</i>")
+            P.append(f"• {task_html(t['name'])} <i>— до {fmt_due(t.get('due_date', ''))}</i>")
 
     if cal:
         P.append("\n📅 <b>Завтра в календаре:</b>")
@@ -97,7 +97,7 @@ async def main() -> None:
     if tomorrow:
         P.append(f"\n📝 <b>Задачи на завтра ({len(tomorrow)}):</b>")
         for t in tomorrow:
-            P.append(f"• {esc(clean_name(t['name']))}")
+            P.append(f"• {task_html(t['name'])}")
 
     if rem:
         P.append("\n⏰ <b>Напоминания:</b>")
