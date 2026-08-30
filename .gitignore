@@ -39,6 +39,9 @@ vault/daily/*.md
 vault/.sessions/
 vault/reminders.json
 vault/topics.json
+vault/habits.json
+vault/habits.json.tmp
+vault/habits.json.broken
 vault/attachments/*
 !vault/daily/.gitkeep
 !vault/attachments/.gitkeep

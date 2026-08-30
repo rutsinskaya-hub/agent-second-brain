@@ -47,3 +47,9 @@ if echo "$RESULT" | grep -q '"ok":false'; then
 fi
 
 echo "=== Evening summary done ==="
+
+# Чеклист ритуалов отдельным сообщением: у него кнопки, их обрабатывает бот.
+# Намеренно не роняем вечерний итог, если чеклист не ушёл — он второстепенен.
+echo "=== Sending habits checklist ==="
+(cd "$PROJECT_DIR" && /home/myuser/.local/bin/uv run python3 "$PROJECT_DIR/scripts/habits_evening.py") \
+    || echo "habits checklist failed (не критично, см. journalctl -u d-brain-evening)"

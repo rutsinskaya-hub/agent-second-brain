@@ -30,6 +30,18 @@ async def fetch_tasks() -> dict:
     }
 
 
+def fetch_streaks() -> str:
+    """Серии по ядру ритуалов. Молчим, если трекер ещё не заведён или пуст."""
+    try:
+        from d_brain.services.habits import HabitStore, streaks_line
+
+        vault = os.environ.get("VAULT_PATH", os.path.join(PROJECT_DIR, "vault"))
+        return streaks_line(HabitStore(os.path.join(vault, "habits.json")))
+    except Exception as e:
+        print(f"Streaks error: {e}", file=sys.stderr)
+        return ""
+
+
 async def main() -> None:
     today = date.today().strftime("%d.%m.%Y")
     try:
@@ -58,6 +70,10 @@ async def main() -> None:
         P.append("\n🔁 <b>Ежедневно:</b>")
         for t in daily:
             P.append(f"• {esc(clean_name(t['name']))}")
+
+    streaks = fetch_streaks()
+    if streaks:
+        P.append(f"\n🔥 <b>Серии:</b> {esc(streaks)}")
 
     if not (overdue or today_tasks):
         P.append("\nЗадач на сегодня нет — можно выдохнуть 🎉")
