@@ -35,7 +35,11 @@ def fetch_streaks() -> str:
     try:
         from d_brain.services.habits import HabitStore, streaks_line
 
-        vault = os.environ.get("VAULT_PATH", os.path.join(PROJECT_DIR, "vault"))
+        # VAULT_PATH относительный («./vault») — разрешаем от корня проекта,
+        # иначе брифинг читал бы пустую историю мимо настоящей.
+        vault = os.environ.get("VAULT_PATH") or "vault"
+        if not os.path.isabs(vault):
+            vault = os.path.join(PROJECT_DIR, vault)
         return streaks_line(HabitStore(os.path.join(vault, "habits.json")))
     except Exception as e:
         print(f"Streaks error: {e}", file=sys.stderr)

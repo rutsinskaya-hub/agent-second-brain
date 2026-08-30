@@ -9,6 +9,7 @@ reply_markup с JSON-раскладкой кнопок, а собирать вл
 верный способ поймать проблему с кодировкой.
 """
 import json
+import logging
 import os
 import sys
 import urllib.parse
@@ -17,6 +18,10 @@ from pathlib import Path
 
 PROJECT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_DIR / "src"))
+
+# Без этого предупреждения автопроверки («t.me/s/... не читается») уходят
+# в никуда, и молчаливый пропуск отметки выглядит как её отсутствие.
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s", stream=sys.stderr)
 
 from d_brain.services.habits import HabitStore, render_checklist  # noqa: E402
 
@@ -44,7 +49,12 @@ def main() -> int:
         print("TELEGRAM_BOT_TOKEN или ALLOWED_USER_IDS не заданы", file=sys.stderr)
         return 1
 
-    vault = Path(os.environ.get("VAULT_PATH", PROJECT_DIR / "vault"))
+    # VAULT_PATH в .env задан относительным («./vault»), поэтому разрешаем его
+    # от корня проекта, а не от текущей директории: иначе запуск не из корня
+    # завёл бы вторую, пустую историю отметок.
+    vault = Path(os.environ.get("VAULT_PATH") or "vault")
+    if not vault.is_absolute():
+        vault = PROJECT_DIR / vault
     store = HabitStore(vault / "habits.json")
 
     # Автоотметки идут первыми, чтобы в сообщении уже стояли галочки по каналам.
