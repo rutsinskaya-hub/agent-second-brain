@@ -13,7 +13,12 @@ PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(PROJECT_DIR, "src"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # для report_fmt
 
-from report_fmt import esc, clean_name, fmt_due, task_html  # noqa: E402
+from report_fmt import esc, clean_name, fmt_due, label_of, task_html  # noqa: E402
+
+# Сколько горячих задач показываем в брифинге и сколько строк даём одному проекту.
+# Остаток не проглатываем молча — досчитываем в хвосте блока.
+HOT_TOTAL = 10
+HOT_PER_PROJECT = 3
 
 
 async def fetch_tasks() -> dict:
@@ -27,7 +32,32 @@ async def fetch_tasks() -> dict:
         "overdue": await c.query_tasks("overdue", limit=20),
         "today": await c.query_tasks("today", limit=30),
         "daily": await c.query_tasks("daily", limit=15),
+        "hot": await c.query_tasks("hot", fetch_all=True),
     }
+
+
+def hot_block(hot: list[dict]) -> list[str]:
+    """Горячее без срока, сгруппированное по проектам: крупные блоки сверху."""
+    groups: dict[str, list[str]] = {}
+    for t in hot:
+        groups.setdefault(label_of(t["name"]) or "Без проекта", []).append(t["name"])
+
+    lines = [f"\n🔥 <b>Горячее без срока ({len(hot)}):</b>"]
+    shown = 0
+    for label in sorted(groups, key=lambda k: (-len(groups[k]), k)):
+        # Порядок внутри группы Notion не хранит (сортировка идёт по пустому сроку),
+        # поэтому решаем сами: свои дела выше, делегированные Игорю — ниже.
+        names = sorted(groups[label], key=lambda n: "(Игорь)" in n)
+        if shown >= HOT_TOTAL:
+            break
+        take = names[: min(HOT_PER_PROJECT, HOT_TOTAL - shown)]
+        lines.append(f"<b>{esc(label)}</b> ({len(names)})")
+        lines.extend(f"• {esc(clean_name(n))}" for n in take)
+        shown += len(take)
+
+    if shown < len(hot):
+        lines.append(f"<i>…и еще {len(hot) - shown} — полный список в карте задач</i>")
+    return lines
 
 
 def fetch_streaks() -> str:
@@ -57,6 +87,7 @@ async def main() -> None:
     overdue = d.get("overdue", [])
     today_tasks = d.get("today", [])
     daily = d.get("daily", [])
+    hot = d.get("hot", [])
 
     P = [f"🌅 <b>Доброе утро! {today}</b>"]
 
@@ -70,6 +101,9 @@ async def main() -> None:
         for t in today_tasks:
             P.append(f"• {task_html(t['name'])}")
 
+    if hot:
+        P.extend(hot_block(hot))
+
     if daily:
         P.append("\n🔁 <b>Ежедневно:</b>")
         for t in daily:
@@ -77,9 +111,9 @@ async def main() -> None:
 
     streaks = fetch_streaks()
     if streaks:
-        P.append(f"\n🔥 <b>Серии:</b> {esc(streaks)}")
+        P.append(f"\n📈 <b>Серии:</b> {esc(streaks)}")
 
-    if not (overdue or today_tasks):
+    if not (overdue or today_tasks or hot):
         P.append("\nЗадач на сегодня нет — можно выдохнуть 🎉")
 
     print("\n".join(P))

@@ -187,7 +187,7 @@ class NotionClient:
     ) -> list[dict]:
         """Query tasks from the database.
 
-        query_type: "overdue" | "today" | "tomorrow" | "in_progress" | "all"
+        query_type: "overdue" | "today" | "tomorrow" | "in_progress" | "hot" | "all"
         project: optional project name to filter by "Проект" relation
         Returns list of simplified task dicts: {name, status, due_date}
         """
@@ -207,6 +207,17 @@ class NotionClient:
             filters = {"property": "Срок выполнения", "date": {"equals": today}}
         elif query_type == "tomorrow":
             filters = {"property": "Срок выполнения", "date": {"equals": tomorrow}}
+        elif query_type == "hot":
+            # Приоритет в Notion отдельным полем не хранится: sync.py кладёт в Status только
+            # Done/Not started, а огонь остаётся символом в заголовке. Берём 🔥 без срока —
+            # датированные и так придут блоками "сегодня" и "просрочено".
+            filters = {
+                "and": [
+                    {"property": "Задача", "title": {"contains": "🔥"}},
+                    {"property": "Срок выполнения", "date": {"is_empty": True}},
+                    {"property": "Status", "status": {"does_not_equal": "Done"}},
+                ]
+            }
         elif query_type == "in_progress":
             filters = {"property": "Status", "status": {"equals": "In progress"}}
         elif query_type == "done":
@@ -280,6 +291,7 @@ _QUERY_LABELS = {
     "today":       "📅 Задачи на сегодня",
     "tomorrow":    "📅 Задачи на завтра",
     "in_progress": "⏳ Задачи в процессе",
+    "hot":         "🔥 Горячее без срока",
     "all":         "📋 Активные задачи",
 }
 
