@@ -92,7 +92,7 @@ Show only if new links created.
 Format: • [[Note A]] ↔ [[Note B]]
 
 ### Priorities (⚡)
-Get tomorrow's tasks from Todoist, sort by priority, show top 3.
+Get tomorrow's tasks from Notion, sort by priority, show top 3.
 
 ### Goals Progress (📈)
 Read goals/1-yearly-2026.md, show goals with recent activity.

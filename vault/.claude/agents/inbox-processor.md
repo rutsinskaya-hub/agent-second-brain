@@ -26,7 +26,7 @@ Is it actionable?
 └─ YES → Will it take < 2 minutes?
          ├─ YES → Do it now
          └─ NO → Is it a single action?
-                 ├─ YES → Schedule in Todoist
+                 ├─ YES → Schedule in Notion
                  └─ NO → Create project
 ```
 
@@ -46,7 +46,7 @@ Apply GTD decision tree:
 | Decision | Action |
 |----------|--------|
 | Do Now | Execute immediately, report done |
-| Schedule | Create task in Todoist |
+| Schedule | Create task in Notion |
 | Project | Create task + note in thoughts/projects/ |
 | Reference | Save to thoughts/{category}/ |
 | Waiting | Create task with "waiting" label |
@@ -60,14 +60,14 @@ Apply GTD decision tree:
 
 **Schedule (single task):**
 ```
-mcp__todoist__add-tasks
+mcp__notion__API-post-page
   content: {task}
   dueString: {date}
   priority: {p1-p4}
 ```
 
 **Project (multi-step):**
-1. Create parent task in Todoist
+1. Create parent task in Notion
 2. Add subtasks for first steps
 3. Create note in thoughts/projects/
 4. Link task and note
@@ -80,7 +80,7 @@ mcp__todoist__add-tasks
 
 **Waiting:**
 ```
-mcp__todoist__add-tasks
+mcp__notion__API-post-page
   content: "Waiting: {description}"
   labels: ["waiting"]
   dueString: "in 3 days"  # follow-up

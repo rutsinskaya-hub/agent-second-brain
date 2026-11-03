@@ -22,7 +22,7 @@ Based on user's work context (see [ABOUT.md](ABOUT.md)):
 <!-- Добавьте имена ваших клиентов через запятую -->
 **Keywords:** [Your Client Names], клиент, бриф, презентация, дедлайн, KPI
 
-**→ Category:** task (p1-p2) → Todoist
+**→ Category:** task (p1-p2) → Notion
 
 ### AI & Tech
 Инструменты, модели, промпты, пайплайны, агенты
@@ -112,9 +112,9 @@ For `[photo]` entries:
 
 | Category | Destination | Priority |
 |----------|-------------|----------|
-| task (client) | Todoist | p1-p2 |
-| task (ops) | Todoist | p2-p3 |
-| task (content) | Todoist | p3-p4 |
+| task (client) | Notion | p1-p2 |
+| task (ops) | Notion | p2-p3 |
+| task (content) | Notion | p3-p4 |
 | idea | thoughts/ideas/ | — |
 | reflection | thoughts/reflections/ | — |
 | project | thoughts/projects/ | — |

@@ -1,6 +1,6 @@
 ---
 name: goal-aligner
-description: Check alignment between tasks in Todoist and goals in vault. Find orphan tasks and stale goals.
+description: Check alignment between tasks in Notion and goals in vault. Find orphan tasks and stale goals.
 ---
 
 # Goal Aligner Agent
@@ -29,7 +29,7 @@ Extract goal keywords for matching.
 ### Step 2: Get All Active Tasks
 
 ```
-mcp__todoist__find-tasks
+mcp__notion__API-post-database-query
   responsibleUserFiltering: "all"
   limit: 100
 ```

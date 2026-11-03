@@ -21,9 +21,9 @@ Analyzes the past week and generates comprehensive digest report.
    daily/YYYY-MM-DD.md (7 files)
    ```
 
-2. **Get completed tasks from Todoist:**
+2. **Get completed tasks from Notion:**
    ```
-   mcp__todoist__find-completed-tasks
+   mcp__notion__API-post-database-query (фильтр Status = Done)
      since: {monday}
      until: {sunday}
    ```
