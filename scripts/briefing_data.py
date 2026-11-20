@@ -104,12 +104,15 @@ async def main() -> None:
     if hot:
         P.extend(hot_block(hot))
 
-    if daily:
+    # 20.11.2026 Дарья: ритуалы («Ежедневно» и «Серии») из брифинга убраны. Код трекера и /habits остаются,
+    # вернуть блоки можно, поставив SHOW_RITUALS = True.
+    SHOW_RITUALS = False
+    if SHOW_RITUALS and daily:
         P.append("\n🔁 <b>Ежедневно:</b>")
         for t in daily:
             P.append(f"• {esc(clean_name(t['name']))}")
 
-    streaks = fetch_streaks()
+    streaks = fetch_streaks() if SHOW_RITUALS else ""
     if streaks:
         P.append(f"\n📈 <b>Серии:</b> {esc(streaks)}")
 
